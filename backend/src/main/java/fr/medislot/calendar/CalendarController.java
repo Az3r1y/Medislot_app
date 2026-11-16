@@ -2,7 +2,6 @@ package fr.medislot.calendar;
 
 import fr.medislot.application.BookingService;
 import fr.medislot.repository.AppointmentRepository;
-import fr.medislot.repository.UserRepository;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -22,11 +21,11 @@ import java.util.HexFormat;
 import java.util.List;
 
 @RestController
+@org.springframework.transaction.annotation.Transactional
 @RequestMapping("/api")
 public class CalendarController {
     private final BookingService booking;
     private final AppointmentRepository appointments;
-    private final UserRepository users;
     private final CalendarService calendar;
     private final JdbcTemplate jdbc;
     private final SecureRandom random = new SecureRandom();
@@ -34,12 +33,10 @@ public class CalendarController {
     public CalendarController(
             BookingService booking,
             AppointmentRepository appointments,
-            UserRepository users,
             CalendarService calendar,
             JdbcTemplate jdbc) {
         this.booking = booking;
         this.appointments = appointments;
-        this.users = users;
         this.calendar = calendar;
         this.jdbc = jdbc;
     }
@@ -84,10 +81,15 @@ public class CalendarController {
 
     @GetMapping("/calendar/subscription")
     public ResponseEntity<SubscriptionStatus> status(Principal principal) {
-        var user = users.findByEmail(principal.getName()).orElseThrow();
+        boolean active =
+                Boolean.TRUE.equals(
+                        jdbc.queryForObject(
+                                "select exists(select 1 from calendar_subscription where user_id=?)",
+                                Boolean.class,
+                                booking.patient(principal.getName())));
         return headers()
                 .headers(h -> h.setCacheControl("private, no-store"))
-                .body(new SubscriptionStatus(user.calendarTokenHash != null));
+                .body(new SubscriptionStatus(active));
     }
 
     @PostMapping("/calendar/subscription")
@@ -96,7 +98,11 @@ public class CalendarController {
         random.nextBytes(bytes);
         String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
         jdbc.update(
-                "UPDATE app_user SET calendar_token_hash = ? WHERE id = ?",
+                """
+                INSERT INTO calendar_subscription(token_hash,user_id,clinic_id)
+                VALUES (?, ?, current_clinic())
+                ON CONFLICT (user_id,clinic_id) DO UPDATE SET token_hash=excluded.token_hash
+                """,
                 hash(token.getBytes(StandardCharsets.US_ASCII)),
                 booking.patient(principal.getName()));
         return headers()
@@ -107,7 +113,7 @@ public class CalendarController {
     @DeleteMapping("/calendar/subscription")
     public ResponseEntity<Void> revoke(Principal principal) {
         jdbc.update(
-                "UPDATE app_user SET calendar_token_hash = NULL WHERE id = ?",
+                "DELETE FROM calendar_subscription WHERE user_id = ?",
                 booking.patient(principal.getName()));
         return ResponseEntity.noContent()
                 .header(HttpHeaders.CACHE_CONTROL, "private, no-store")
@@ -118,10 +124,15 @@ public class CalendarController {
     public ResponseEntity<byte[]> feed(
             @RequestParam(required = false) String token, WebRequest request) {
         if (token == null || !token.matches("[A-Za-z0-9_-]{43}")) throw missing();
-        var user =
-                users.findByCalendarTokenHash(hash(token.getBytes(StandardCharsets.US_ASCII)))
-                        .orElseThrow(CalendarController::missing);
-        byte[] body = calendar.render(appointments.findByPatientIdOrderByCreatedAtDesc(user.id));
+        var patients =
+                jdbc.queryForList(
+                        "select user_id from calendar_subscription where token_hash=?",
+                        Long.class,
+                        hash(token.getBytes(StandardCharsets.US_ASCII)));
+        if (patients.isEmpty()) throw missing();
+        byte[] body =
+                calendar.render(
+                        appointments.findByPatientIdOrderByCreatedAtDesc(patients.getFirst()));
         String etag = "\"" + hash(body) + "\"";
         if (request.checkNotModified(etag)) {
             return ResponseEntity.status(HttpStatus.NOT_MODIFIED)

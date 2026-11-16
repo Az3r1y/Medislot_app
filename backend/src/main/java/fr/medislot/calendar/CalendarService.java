@@ -14,6 +14,7 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 
 @Service
+@org.springframework.transaction.annotation.Transactional(readOnly = true)
 public class CalendarService {
     private final SlotRepository slots;
     private final ProfessionalRepository professionals;

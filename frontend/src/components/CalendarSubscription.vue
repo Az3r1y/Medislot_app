@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { api } from '../api';
+import { useClinic } from '../stores/clinic';
+const clinic = useClinic();
 
 const active = ref(false);
 const link = ref('');
@@ -28,6 +30,7 @@ async function create() {
     const { token } = await api<{ token: string }>('/calendar/subscription', { method: 'POST' });
     const url = new URL('/api/calendar/feed.ics', window.location.origin);
     url.searchParams.set('token', token);
+    url.searchParams.set('clinic', clinic.slug);
     link.value = `webcal://${url.host}${url.pathname}${url.search}`;
     active.value = true;
     message.value =

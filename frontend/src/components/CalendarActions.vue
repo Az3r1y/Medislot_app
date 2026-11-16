@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
+import { fetchCalendar } from '../calendar';
 import type { Appointment } from '../types';
 const props = defineProps<{ appointment: Appointment }>();
 const error = ref('');
@@ -28,12 +29,8 @@ async function download() {
   error.value = '';
   success.value = '';
   try {
-    const response = await fetch(`/api/appointments/${props.appointment.id}/calendar.ics`, {
-      credentials: 'same-origin',
-    });
-    if (!response.ok || !response.headers.get('content-type')?.startsWith('text/calendar'))
-      throw new Error();
-    const url = URL.createObjectURL(await response.blob());
+    const blob = await fetchCalendar(props.appointment.id);
+    const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
     anchor.download = 'rendez-vous.ics';

@@ -12,6 +12,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
+@org.springframework.transaction.annotation.Transactional(readOnly = true)
 public interface SlotRepository extends JpaRepository<Slot, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select s from Slot s where s.id = :id")

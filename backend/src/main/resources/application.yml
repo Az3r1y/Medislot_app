@@ -11,7 +11,7 @@ server:
 spring:
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/medislot}
-    username: ${DB_USER:medislot}
+    username: ${DB_USER:medislot_app}
     # obligatoire : pas de valeur par défaut
     password: ${DB_PASSWORD}
     hikari:
@@ -23,6 +23,9 @@ spring:
       ddl-auto: validate
   flyway:
     enabled: true
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/medislot}
+    user: ${MIGRATION_USER:medislot}
+    password: ${MIGRATION_PASSWORD}
   session:
     jdbc:
       # tables créées par la migration V3 (Flyway reste seul maître du schéma)

@@ -106,7 +106,11 @@ public class BookingService {
         appointments.saveAndFlush(a);
         Span.current().setAttribute("medislot.appointment.id", a.id);
         record(a, "CREATED", "Votre rendez-vous est confirmé.");
-        events.publishEvent(new BookingChanged(patient, List.of(s.professionalId)));
+        events.publishEvent(
+                new BookingChanged(
+                        fr.medislot.tenant.TenantContext.required(),
+                        patient,
+                        List.of(s.professionalId)));
         return a;
     }
 
@@ -120,7 +124,11 @@ public class BookingService {
         a.calendarUpdatedAt = Instant.now();
         appointments.saveAndFlush(a);
         record(a, "CANCELLED", "Votre rendez-vous a été annulé.");
-        events.publishEvent(new BookingChanged(a.patientId, List.of(s.professionalId)));
+        events.publishEvent(
+                new BookingChanged(
+                        fr.medislot.tenant.TenantContext.required(),
+                        a.patientId,
+                        List.of(s.professionalId)));
         return a;
     }
 
@@ -141,7 +149,9 @@ public class BookingService {
         record(a, "RESCHEDULED", "Votre rendez-vous a été déplacé.");
         events.publishEvent(
                 new BookingChanged(
-                        a.patientId, List.of(old.professionalId, target.professionalId)));
+                        fr.medislot.tenant.TenantContext.required(),
+                        a.patientId,
+                        List.of(old.professionalId, target.professionalId)));
         return a;
     }
 

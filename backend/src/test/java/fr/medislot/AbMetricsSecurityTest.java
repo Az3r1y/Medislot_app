@@ -34,14 +34,18 @@ class AbMetricsSecurityTest {
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry r) {
         r.add("spring.datasource.url", db::getJdbcUrl);
-        r.add("spring.datasource.username", db::getUsername);
-        r.add("spring.datasource.password", db::getPassword);
+        r.add("spring.flyway.url", db::getJdbcUrl);
+        r.add("spring.flyway.user", db::getUsername);
+        r.add("spring.flyway.password", db::getPassword);
+        r.add("spring.datasource.username", () -> "medislot_app");
+        r.add("spring.datasource.password", () -> "medislot-app-local-only");
         r.add("AB_ENABLED", () -> "true");
     }
 
     @LocalServerPort int port;
     @Autowired UserRepository users;
     @Autowired PasswordEncoder encoder;
+    @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
 
     HttpClient client() {
         return HttpClient.newBuilder().cookieHandler(new CookieManager()).build();
@@ -50,6 +54,7 @@ class AbMetricsSecurityTest {
     int get(HttpClient c, String path) throws Exception {
         return c.send(
                         HttpRequest.newBuilder(URI.create("http://localhost:" + port + path))
+                                .header("X-Clinic", "cabinet-a")
                                 .build(),
                         HttpResponse.BodyHandlers.discarding())
                 .statusCode();
@@ -62,6 +67,7 @@ class AbMetricsSecurityTest {
                                 HttpRequest.newBuilder(
                                                 URI.create(
                                                         "http://localhost:" + port + "/api/csrf"))
+                                        .header("X-Clinic", "cabinet-a")
                                         .build(),
                                 HttpResponse.BodyHandlers.ofString())
                         .body();
@@ -105,6 +111,7 @@ class AbMetricsSecurityTest {
             u.role = "ADMIN";
             u.password = encoder.encode("MediSlot-demo-2026!");
             users.save(u);
+            jdbc.update("insert into membership(user_id,clinic_id) values (?,1)", u.id);
         }
         assertEquals(200, get(loggedIn("admin@medislot.test"), "/api/ab/metrics"));
     }
@@ -123,6 +130,7 @@ class AbMetricsSecurityTest {
                                 HttpRequest.newBuilder(
                                                 URI.create(
                                                         "http://localhost:" + port + "/api/csrf"))
+                                        .header("X-Clinic", "cabinet-a")
                                         .build(),
                                 HttpResponse.BodyHandlers.ofString())
                         .body();
@@ -141,6 +149,7 @@ class AbMetricsSecurityTest {
                                                 HttpRequest.BodyPublishers.ofString(
                                                         "username=autre%40medislot.test&password="
                                                                 + URLEncoder.encode(pw, "UTF-8")))
+                                        .header("X-Clinic", "cabinet-a")
                                         .build(),
                                 HttpResponse.BodyHandlers.ofString());
                     } catch (Exception e) {

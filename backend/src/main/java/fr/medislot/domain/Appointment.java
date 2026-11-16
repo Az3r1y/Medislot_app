@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 
 @Entity
 @Table(name = "appointment")
-public class Appointment {
+public class Appointment extends fr.medislot.tenant.ClinicOwned {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     public Long id;

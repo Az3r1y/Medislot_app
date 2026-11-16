@@ -6,6 +6,7 @@ import java.util.Comparator;
 import java.util.List;
 
 @Service
+@org.springframework.transaction.annotation.Transactional
 public class NearbyService {
     // Ordre stable d'une page à l'autre, même à distance égale.
     static final Comparator<NearbyFinder.Found> ORDER =

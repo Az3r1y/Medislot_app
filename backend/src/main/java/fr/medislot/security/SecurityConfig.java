@@ -44,7 +44,9 @@ public class SecurityConfig {
     }
 
     @Bean
-    SecurityFilterChain filter(HttpSecurity http, LoginAttempts attempts) throws Exception {
+    SecurityFilterChain filter(
+            HttpSecurity http, LoginAttempts attempts, fr.medislot.tenant.ClinicDirectory clinics)
+            throws Exception {
         // Verrou par compte, avant la vérification du mot de passe.
         http.addFilterBefore(
                 (req, res, chain) -> {
@@ -61,17 +63,23 @@ public class SecurityConfig {
                     chain.doFilter(req, res);
                 },
                 UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(
+                new fr.medislot.tenant.TenantFilter(clinics),
+                org.springframework.security.web.access.intercept.AuthorizationFilter.class);
         http.authorizeHttpRequests(
                         a ->
                                 a.dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR)
                                         .permitAll()
                                         // Avant le permitAll de /api/ab/** : la première règle qui
                                         // correspond s'applique.
+                                        .requestMatchers("/api/clinic/agenda")
+                                        .hasAnyRole("SECRETARY", "ADMIN")
                                         .requestMatchers("/api/ab/metrics")
                                         .hasRole("ADMIN")
                                         .requestMatchers(
                                                 "/api/csrf",
                                                 "/api/calendar/feed.ics",
+                                                "/api/clinics",
                                                 "/api/register",
                                                 "/api/login",
                                                 "/api/professionals/**",

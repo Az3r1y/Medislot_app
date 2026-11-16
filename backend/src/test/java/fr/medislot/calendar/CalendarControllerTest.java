@@ -25,11 +25,9 @@ import java.util.Optional;
 class CalendarControllerTest {
     BookingService booking = mock(BookingService.class);
     AppointmentRepository appointments = mock(AppointmentRepository.class);
-    UserRepository users = mock(UserRepository.class);
     CalendarService calendar = mock(CalendarService.class);
     JdbcTemplate jdbc = mock(JdbcTemplate.class);
-    CalendarController controller =
-            new CalendarController(booking, appointments, users, calendar, jdbc);
+    CalendarController controller = new CalendarController(booking, appointments, calendar, jdbc);
     Principal patient = () -> "patient@test";
 
     @Test
@@ -55,12 +53,11 @@ class CalendarControllerTest {
                         .formatHex(
                                 MessageDigest.getInstance("SHA-256")
                                         .digest(token.getBytes(StandardCharsets.US_ASCII)));
-        verify(jdbc).update(contains("calendar_token_hash = ?"), eq(hash), eq(1L));
+        verify(jdbc).update(contains("INSERT INTO calendar_subscription"), eq(hash), eq(1L));
         String next = controller.create(patient).getBody().token();
         assertThat(next).isNotEqualTo(token);
-        var user = new AppUser();
-        user.id = 1L;
-        when(users.findByCalendarTokenHash(hash)).thenReturn(Optional.of(user));
+        when(jdbc.queryForList(contains("where token_hash=?"), eq(Long.class), eq(hash)))
+                .thenReturn(List.of(1L));
         when(appointments.findByPatientIdOrderByCreatedAtDesc(1L)).thenReturn(List.of());
         when(calendar.render(List.of())).thenReturn("calendar".getBytes(StandardCharsets.UTF_8));
         var response =
@@ -81,7 +78,8 @@ class CalendarControllerTest {
                                 .getStatusCode()
                                 .value())
                 .isEqualTo(304);
-        when(users.findByCalendarTokenHash(hash)).thenReturn(Optional.empty());
+        when(jdbc.queryForList(contains("where token_hash=?"), eq(Long.class), eq(hash)))
+                .thenReturn(List.of());
         assertThatThrownBy(
                         () ->
                                 controller.feed(
@@ -90,6 +88,6 @@ class CalendarControllerTest {
                         ResponseStatusException.class,
                         e -> assertThat(e.getStatusCode().value()).isEqualTo(404));
         controller.revoke(patient);
-        verify(jdbc).update(contains("calendar_token_hash = NULL"), eq(1L));
+        verify(jdbc).update(contains("DELETE FROM calendar_subscription"), eq(1L));
     }
 }

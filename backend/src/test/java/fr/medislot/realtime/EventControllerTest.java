@@ -9,6 +9,16 @@ import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletResponse;
 
 class EventControllerTest {
+    @org.junit.jupiter.api.BeforeEach
+    void selectClinic() {
+        fr.medislot.tenant.TenantContext.set(1L);
+    }
+
+    @org.junit.jupiter.api.AfterEach
+    void clearClinic() {
+        fr.medislot.tenant.TenantContext.clear();
+    }
+
     @Test
     void returns503WithoutStreamWhenFull() {
         var c = new EventController(mock(BookingService.class), 2);

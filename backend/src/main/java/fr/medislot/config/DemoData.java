@@ -7,7 +7,6 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.*;
 
@@ -18,28 +17,72 @@ public class DemoData implements CommandLineRunner {
     private final ProfessionalRepository professionals;
     private final SlotRepository slots;
     private final PasswordEncoder encoder;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbc;
+    private final org.springframework.transaction.support.TransactionTemplate transactions;
 
     public DemoData(
-            UserRepository u, ProfessionalRepository p, SlotRepository s, PasswordEncoder e) {
+            UserRepository u,
+            ProfessionalRepository p,
+            SlotRepository s,
+            PasswordEncoder e,
+            org.springframework.jdbc.core.JdbcTemplate jdbc,
+            org.springframework.transaction.PlatformTransactionManager manager) {
         users = u;
         professionals = p;
         slots = s;
         encoder = e;
+        this.jdbc = jdbc;
+        transactions = new org.springframework.transaction.support.TransactionTemplate(manager);
     }
 
     @Override
-    @Transactional
     public void run(String... args) {
-        if (!users.existsByEmail("patient@medislot.test")) {
-            for (String email : new String[] {"patient@medislot.test", "autre@medislot.test"}) {
+        for (String email :
+                new String[] {
+                    "patient@medislot.test",
+                    "autre@medislot.test",
+                    "secretaire-a@medislot.test",
+                    "secretaire-b@medislot.test"
+                }) {
+            if (!users.existsByEmail(email)) {
                 AppUser u = new AppUser();
                 u.email = email;
-                u.name = email.startsWith("patient") ? "Camille Dupont" : "Alex Martin";
-                u.role = "PATIENT";
+                u.name =
+                        email.startsWith("patient")
+                                ? "Camille Dupont"
+                                : email.startsWith("autre")
+                                        ? "Alex Martin"
+                                        : "Secrétariat "
+                                                + (email.contains("-a@") ? "Paris" : "Lyon");
+                u.role = email.startsWith("secretaire") ? "SECRETARY" : "PATIENT";
                 u.password = encoder.encode("MediSlot-demo-2026!");
                 users.save(u);
             }
+            var user = users.findByEmail(email).orElseThrow();
+            String[] slugs =
+                    email.startsWith("patient")
+                            ? new String[] {"cabinet-a", "cabinet-b"}
+                            : new String[] {email.contains("-b@") ? "cabinet-b" : "cabinet-a"};
+            for (String slug : slugs)
+                jdbc.update(
+                        """
+                insert into membership(user_id,clinic_id) select ?,id from clinic where slug=?
+                on conflict do nothing
+                """,
+                        user.id,
+                        slug);
         }
+        for (Long clinic : jdbc.queryForList("select id from clinic order by id", Long.class)) {
+            fr.medislot.tenant.TenantContext.set(clinic);
+            try {
+                transactions.executeWithoutResult(status -> seedClinic());
+            } finally {
+                fr.medislot.tenant.TenantContext.clear();
+            }
+        }
+    }
+
+    private void seedClinic() {
         if (professionals.count() > 0) return;
         // Praticiens fictifs ; positions géocodées avec la Géoplateforme IGN.
         String[][] rows = {
@@ -92,6 +135,13 @@ public class DemoData implements CommandLineRunner {
             }
         };
         for (String[] row : rows) {
+            boolean lyon = row[2].equals("Lyon") || row[2].equals("Villeurbanne");
+            Long clinic =
+                    jdbc.queryForObject(
+                            "select id from clinic where slug=?",
+                            Long.class,
+                            lyon ? "cabinet-b" : "cabinet-a");
+            if (!clinic.equals(fr.medislot.tenant.TenantContext.current())) continue;
             Professional p = new Professional();
             p.name = row[0];
             p.specialty = row[1];
