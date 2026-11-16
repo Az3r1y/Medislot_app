@@ -30,14 +30,43 @@ test('export ICS et liens personnels restent limites au cabinet courant', async 
     expect(await readFile((await file.path())!, 'utf8')).toContain(
       `UID:appointment-${appointment.id}@medislot`,
     );
+    const screenshots = process.env.CALENDAR_SCREENSHOT_DIR;
+    if (screenshots)
+      await page.screenshot({ path: `${screenshots}/calendar-export.png`, fullPage: true });
     await page.getByRole('button', { name: 'Créer un lien', exact: true }).click();
     const a = new URL(await page.getByLabel('Lien personnel').inputValue());
+    expect(a.protocol).toMatch(/^https?:$/);
+    await expect(page.getByRole('link', { name: 'Ouvrir dans mon agenda' })).toHaveAttribute(
+      'href',
+      /^webcal:\/\//,
+    );
+    if (screenshots) {
+      const input = page.getByLabel('Lien personnel');
+      const value = await input.inputValue();
+      await input.evaluate((element: HTMLInputElement) => {
+        element.value = 'Lien personnel masqué';
+      });
+      await page.screenshot({
+        path: `${screenshots}/calendar-subscription.png`,
+        fullPage: true,
+      });
+      await input.evaluate((element: HTMLInputElement, original) => {
+        element.value = original;
+      }, value);
+    }
     expect(a.searchParams.get('clinic')).toBe('cabinet-a');
-    const urlA = `/api/calendar/feed.ics${a.search}`;
-    expect((await page.request.get(urlA)).status()).toBe(200);
+    const oldUrl = `/api/calendar/feed.ics${a.search}`;
+    expect((await page.request.get(oldUrl)).status()).toBe(200);
     const crossed = new URL(a);
     crossed.searchParams.set('clinic', 'cabinet-b');
     expect((await page.request.get(`/api/calendar/feed.ics${crossed.search}`)).status()).toBe(404);
+    page.once('dialog', (dialog) => dialog.accept());
+    await page.getByRole('button', { name: 'Régénérer le lien' }).click();
+    await expect(page.getByLabel('Lien personnel')).not.toHaveValue(a.toString());
+    const updated = new URL(await page.getByLabel('Lien personnel').inputValue());
+    const urlA = `/api/calendar/feed.ics${updated.search}`;
+    expect((await page.request.get(oldUrl)).status()).toBe(404);
+    expect((await page.request.get(urlA)).status()).toBe(200);
     await page.getByLabel('Cabinet', { exact: true }).selectOption('cabinet-b');
     await expect(page.getByLabel('Lien personnel')).toHaveCount(0);
     await page.getByRole('button', { name: 'Créer un lien', exact: true }).click();
@@ -57,4 +86,5 @@ test('export ICS et liens personnels restent limites au cabinet courant', async 
     await page.request.post(`/api/appointments/${appointment.id}/cancel`, { headers });
     await page.request.delete('/api/calendar/subscription', { headers });
   }
+  await page.goto('about:blank');
 });

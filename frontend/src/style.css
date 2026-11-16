@@ -516,6 +516,39 @@ button {
   flex-direction: column;
   gap: 8px;
 }
+.calendar-subscription {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  margin-bottom: 18px;
+  padding: 26px;
+}
+.calendar-subscription h2,
+.calendar-subscription p {
+  margin: 0;
+}
+.calendar-subscription div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+.calendar-subscription input {
+  flex: 1 1 300px;
+  min-width: 0;
+}
+.calendar-subscription button {
+  border: 1px solid #c6d7e3;
+  border-radius: 7px;
+  color: #166d9e;
+  background: white;
+  padding: 10px 18px;
+}
 .danger-link {
   color: #9e4433 !important;
 }

@@ -31,7 +31,7 @@ async function create() {
     const url = new URL('/api/calendar/feed.ics', window.location.origin);
     url.searchParams.set('token', token);
     url.searchParams.set('clinic', clinic.slug);
-    link.value = `webcal://${url.host}${url.pathname}${url.search}`;
+    link.value = url.toString();
     active.value = true;
     message.value =
       'Votre lien est prêt. Copiez-le maintenant, il ne sera plus affiché après avoir quitté cette page.';
@@ -74,7 +74,7 @@ async function copy() {
 </script>
 
 <template>
-  <section class="appointment" aria-labelledby="calendar-title">
+  <section class="calendar-subscription" aria-labelledby="calendar-title">
     <h2 id="calendar-title">Abonnement calendrier</h2>
     <p>Votre agenda mettra les rendez-vous à jour selon sa fréquence de synchronisation.</p>
     <p v-if="active && !link">Un lien est actif. Régénérez-le pour obtenir un nouveau lien.</p>
@@ -87,7 +87,7 @@ async function copy() {
         @focus="($event.target as HTMLInputElement).select()"
       />
       <button @click="copy">Copier le lien</button>
-      <a :href="link">Ouvrir dans mon agenda</a>
+      <a :href="link.replace(/^https?:/, 'webcal:')">Ouvrir dans mon agenda</a>
     </div>
     <button :disabled="busy || !loaded" @click="create">
       {{ active ? 'Régénérer le lien' : 'Créer un lien' }}
