@@ -1,3 +1,4 @@
+import { useClinic } from './clinic';
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { api, refreshCsrf, ApiError } from '../api';
@@ -6,7 +7,9 @@ export const useSession = defineStore('session', () => {
   const user = ref<Identity | null>(null);
   async function load() {
     try {
-      user.value = await api<Identity>('/me');
+      const identity = await api<Identity>('/me');
+      await useClinic().afterLogin();
+      user.value = identity;
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) user.value = null;
       else throw e;
@@ -24,6 +27,7 @@ export const useSession = defineStore('session', () => {
   async function logout() {
     await api('/logout', { method: 'POST' });
     user.value = null;
+    useClinic().afterLogout();
     await refreshCsrf();
   }
   return { user, load, login, logout };
