@@ -20,7 +20,13 @@ public class TenantFilter extends OncePerRequestFilter {
     public static final String PARAM =
             "clinic"; // EventSource ne permet pas d'en-tête personnalisé.
     private static final Set<String> GLOBAL =
-            Set.of("/api/csrf", "/api/login", "/api/logout", "/api/me", "/api/clinics");
+            Set.of(
+                    "/api/csrf",
+                    "/api/login",
+                    "/api/logout",
+                    "/api/me",
+                    "/api/clinics",
+                    "/api/auth/providers");
     private final ClinicDirectory clinics;
 
     public TenantFilter(ClinicDirectory clinics) {

@@ -12,6 +12,7 @@ Le projet utilise des praticiens et des comptes fictifs pour la démonstration.
 - Carte des résultats avec Leaflet et OpenStreetMap ; géocodage des adresses via la Géoplateforme IGN.
 - Fiches des praticiens et disponibilités affichées dans le fuseau `Europe/Paris`.
 - Inscription, connexion et déconnexion par session, avec protection CSRF.
+- Connexion avec Google (OpenID Connect), activée lorsque des identifiants Google sont fournis.
 - Réservation, déplacement et annulation des rendez-vous.
 - Historique des opérations, notifications et mise à jour des disponibilités en temps réel par SSE.
 - Téléchargement d’une convocation PDF.
@@ -125,8 +126,31 @@ La chaîne de traces complète, avec l’agent Java, le collecteur et Jaeger, es
 | `DEMO_SEED` | Initialisation des données fictives | `false` |
 | `COOKIE_SECURE` | Cookies réservés aux connexions HTTPS | `true` |
 | `AB_ENABLED` | Activation de l’expérience A/B | `true` |
+| `GOOGLE_CLIENT_ID` | Identifiant du client OAuth Google ; vide : connexion Google désactivée | vide |
+| `GOOGLE_CLIENT_SECRET` | Secret du client OAuth Google, obligatoire avec `GOOGLE_CLIENT_ID` | vide |
+| `GOOGLE_REDIRECT_URI` | URI de retour déclarée chez Google | adresse vue par le backend |
 
 Pour la démonstration locale, `compose.yaml` active les données fictives, autorise les cookies en HTTP et utilise deux comptes PostgreSQL : `medislot` pour les migrations (`medislot-local-only` par défaut) et `medislot_app` pour les requêtes (`medislot-app-local-only`). Ces identifiants sont réservés à la démonstration ; les changements de mots de passe doivent être appliqués aussi aux rôles PostgreSQL.
+
+### Connexion avec Google
+
+La connexion avec Google est facultative. Sans `GOOGLE_CLIENT_ID`, l’application démarre normalement et le bouton « Continuer avec Google » n’est pas affiché.
+
+1. Dans la [console Google Cloud](https://console.cloud.google.com/apis/credentials), configurer l’écran de consentement OAuth, puis créer un identifiant « ID client OAuth » de type « Application Web ».
+2. Ajouter les URI de redirection autorisées, selon l’environnement :
+   - Docker Compose : `http://localhost:8088/api/login/oauth2/code/google`
+   - Développement avec Vite : `http://127.0.0.1:5173/api/login/oauth2/code/google`
+3. Copier `.env.example` en `.env` à la racine du dépôt et renseigner `GOOGLE_CLIENT_ID` et `GOOGLE_CLIENT_SECRET`. Le fichier `.env` est lu par Docker Compose et n’est pas versionné.
+4. Relancer la stack : `docker compose up -d --build`.
+
+En développement local, exporter les mêmes variables avant de démarrer le backend, avec `GOOGLE_REDIRECT_URI=http://127.0.0.1:5173/api/login/oauth2/code/google`. L’URI doit correspondre exactement à celle déclarée chez Google.
+
+Fonctionnement :
+
+- Le parcours passe par `/api/oauth2/authorization/google`, puis Google rappelle `/api/login/oauth2/code/google`. Spring Security vérifie `state`, `nonce`, PKCE et la signature du jeton OpenID.
+- Le compte MediSlot est relié à l’identifiant `sub` de Google, stable même si l’adresse e-mail change. À la première connexion, un compte patient sans mot de passe est créé si Google indique que l’adresse est vérifiée, avec une appartenance au cabinet sélectionné. Le retour de Google conserve ce cabinet dans l’URL. Les connexions suivantes n’ajoutent aucune appartenance automatiquement.
+- Un compte existant créé avec un mot de passe n’est jamais relié automatiquement à Google, car l’inscription locale ne vérifie pas l’adresse e-mail. La personne est invitée à se connecter avec son mot de passe.
+- Un compte créé avec Google ne peut pas se connecter par mot de passe.
 
 ### Variante PostGIS
 

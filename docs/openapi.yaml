@@ -285,6 +285,97 @@
         }
       }
     },
+    "/auth/providers": {
+      "get": {
+        "summary": "Lister les modes de connexion proposés en plus du mot de passe",
+        "responses": {
+          "200": {
+            "description": "Réponse réussie",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "google"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "google": {
+                      "type": "boolean",
+                      "description": "Vrai si la connexion avec Google est configurée."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/oauth2/authorization/google": {
+      "get": {
+        "summary": "Commencer la connexion avec Google (navigation du navigateur, pas un appel fetch)",
+        "responses": {
+          "302": {
+            "description": "Redirection vers Google avec state, nonce et PKCE. 404 si Google n’est pas configuré."
+          },
+          "400": {
+            "description": "Cabinet manquant ou invalide"
+          },
+          "404": {
+            "description": "Cabinet inconnu ou Google non configuré"
+          }
+        },
+        "parameters": [
+          {
+            "name": "clinic",
+            "in": "query",
+            "required": true,
+            "description": "Cabinet choisi, conservé côté serveur dans la demande OAuth liée au state.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/login/oauth2/code/google": {
+      "get": {
+        "summary": "Retour de Google après consentement",
+        "description": "Appelé par Google. Les identifiants Google sont liés au compte par l’identifiant sub ; un compte local existant n’est jamais relié automatiquement.",
+        "parameters": [
+          {
+            "name": "state",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "error",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Retour vers /c/<slug>/, cabinet retrouvé dans la demande OAuth en session. En cas d’échec, paramètre google_error limité aux codes connus."
+          }
+        }
+      }
+    },
     "/me": {
       "get": {
         "summary": "Lire son identité",

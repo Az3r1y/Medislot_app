@@ -18,6 +18,7 @@ import ProfessionalProfile from './components/ProfessionalProfile.vue';
 import AppointmentHistory from './components/AppointmentHistory.vue';
 import CancelConfirm from './components/CancelConfirm.vue';
 import { api, ApiError } from './api';
+import { takeGoogleError } from './googleAuth';
 import { useSession } from './stores/session';
 import { useLive } from './composables/useLive';
 import { useAb } from './composables/useAb';
@@ -435,6 +436,8 @@ window.addEventListener('online', () => {
 });
 let initialized = false;
 onMounted(async () => {
+  const googleError = takeGoogleError(window.location.href);
+  if (googleError) window.history.replaceState(window.history.state, '', googleError.cleanUrl);
   try {
     await clinic.load();
   } catch (e) {
@@ -444,6 +447,11 @@ onMounted(async () => {
     await session.load();
   } catch (e) {
     error.value = message(e);
+  }
+  await session.loadProviders();
+  if (googleError) {
+    openAuth();
+    authError.value = googleError.message;
   }
   initialized = true;
   ab.load();
@@ -567,6 +575,7 @@ onMounted(async () => {
         v-model:name="name"
         :register="register"
         :busy="busy"
+        :google="session.providers.google"
         :auth-error="authError"
         :field-errors="fieldErrors"
         @submit="authenticate"

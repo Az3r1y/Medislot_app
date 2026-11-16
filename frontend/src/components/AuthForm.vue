@@ -1,10 +1,14 @@
 <script setup lang="ts">
+import { googleLoginUrl } from '../googleAuth';
+import { useClinic } from '../stores/clinic';
+const clinic = useClinic();
 const email = defineModel<string>('email', { required: true });
 const password = defineModel<string>('password', { required: true });
 const name = defineModel<string>('name', { required: true });
 defineProps<{
   register: boolean;
   busy: boolean;
+  google: boolean;
   authError: string;
   fieldErrors: Record<string, string>;
 }>();
@@ -19,6 +23,11 @@ const describedBy = (...ids: (string | false)[]) => ids.filter(Boolean).join(' '
     {{ register ? 'Créer votre compte' : 'Heureux de vous retrouver' }}
   </h2>
   <p class="subtle">Connectez-vous pour confirmer et retrouver vos rendez-vous.</p>
+  <template v-if="google">
+    <!-- lien et non bouton : navigation complète vers Google, puis retour sur l'accueil -->
+    <a class="google-button" :href="googleLoginUrl(clinic.slug)">Continuer avec Google</a>
+    <p class="auth-separator"><span>ou avec votre adresse e-mail</span></p>
+  </template>
   <!-- novalidate : la règle et son message viennent du 400 du back, affichés sous le champ -->
   <form class="auth-form" novalidate @submit.prevent="emit('submit')">
     <p class="subtle">Tous les champs sont obligatoires.</p>
