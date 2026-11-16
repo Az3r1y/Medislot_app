@@ -35,6 +35,10 @@ export interface Identity {
   email: string;
   role: string;
 }
+// modes de connexion proposés par le back, en plus du mot de passe
+export interface Providers {
+  google: boolean;
+}
 export interface Page<T> {
   items: T[];
   page: number;

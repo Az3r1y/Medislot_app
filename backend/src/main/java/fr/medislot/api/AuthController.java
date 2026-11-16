@@ -18,14 +18,27 @@ public class AuthController {
     private final UserRepository users;
     private final PasswordEncoder encoder;
     private final org.springframework.jdbc.core.JdbcTemplate jdbc;
+    private final boolean googleEnabled;
 
     public AuthController(
             UserRepository users,
             PasswordEncoder encoder,
-            org.springframework.jdbc.core.JdbcTemplate jdbc) {
+            org.springframework.jdbc.core.JdbcTemplate jdbc,
+            org.springframework.beans.factory.ObjectProvider<
+                            org.springframework.security.oauth2.client.registration
+                                    .ClientRegistrationRepository>
+                    google) {
         this.users = users;
         this.encoder = encoder;
         this.jdbc = jdbc;
+        this.googleEnabled = google.getIfAvailable() != null;
+    }
+
+    public record Providers(boolean google) {}
+
+    @GetMapping("/auth/providers")
+    public Providers providers() {
+        return new Providers(googleEnabled);
     }
 
     public record Identity(Long id, String name, String email, String role) {}
