@@ -845,3 +845,37 @@ footer small {
   color: #5b6475;
   font-size: 13px;
 }
+
+.clinic-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin: 1rem auto;
+  padding: 1rem 1.5rem;
+  max-width: 1160px;
+  border-left: 6px solid;
+  background: #fff;
+  border-radius: 12px;
+}
+.clinic-banner div,
+.clinic-banner label {
+  display: grid;
+  gap: 0.35rem;
+}
+.clinic-banner select {
+  max-width: 100%;
+  padding: 0.55rem;
+}
+.clinic-agenda {
+  list-style: none;
+  padding: 0;
+}
+.clinic-agenda li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 1rem;
+  border-bottom: 1px solid #dce5e1;
+}

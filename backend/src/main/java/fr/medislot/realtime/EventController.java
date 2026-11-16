@@ -13,7 +13,7 @@ import java.util.concurrent.*;
 
 @RestController
 public class EventController {
-    private record Subscriber(SseEmitter emitter, Long patient) {}
+    private record Subscriber(SseEmitter emitter, Long patient, Long clinic) {}
 
     private final Set<Subscriber> clients = ConcurrentHashMap.newKeySet();
     private final BookingService booking;
@@ -46,7 +46,8 @@ public class EventController {
             return null;
         }
         SseEmitter emitter = new SseEmitter(120000L);
-        Subscriber s = new Subscriber(emitter, patient);
+        Subscriber s =
+                new Subscriber(emitter, patient, fr.medislot.tenant.TenantContext.required());
         clients.add(s);
         emitter.onCompletion(() -> clients.remove(s));
         emitter.onTimeout(
@@ -71,6 +72,7 @@ public class EventController {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void committed(BookingChanged event) {
         for (Subscriber s : clients) {
+            if (!s.clinic.equals(event.clinicId())) continue;
             if (s.patient == null)
                 send(s, "slots-changed", Map.of("professionalIds", event.professionalIds()));
             else if (s.patient.equals(event.patientId()))

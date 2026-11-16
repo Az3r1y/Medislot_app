@@ -26,7 +26,11 @@ const emit = defineEmits<{
         :aria-current="view === 'appointments' ? 'page' : undefined"
         @click="emit('appointments')"
       >
-        Mes rendez-vous</button
+        {{
+          user?.role === 'SECRETARY' || user?.role === 'ADMIN'
+            ? 'Agenda du cabinet'
+            : 'Mes rendez-vous'
+        }}</button
       ><button v-if="user" @click="emit('toggleNotices')" :aria-expanded="showNotices">
         Notifications <span class="count">{{ noticeCount }}</span></button
       ><button v-if="!user" class="login" @click="emit('login')">Se connecter</button
