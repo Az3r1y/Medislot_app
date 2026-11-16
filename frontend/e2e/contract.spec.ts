@@ -15,6 +15,7 @@ test('les réponses publiques respectent le contrat OpenAPI', async ({ request }
     ['/professionals?page=0&size=2', '/professionals'],
     ['/professionals/1', '/professionals/{id}'],
     ['/professionals/1/slots', '/professionals/{id}/slots'],
+    ['/auth/providers', '/auth/providers'],
   ]) {
     const response = await request.get('/api' + route);
     expect(response.status()).toBe(200);

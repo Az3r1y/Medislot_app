@@ -591,6 +591,40 @@ footer small {
   color: #436073;
   font-size: 29px;
 }
+.google-button {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 22px;
+  padding: 13px 23px;
+  border: 1px solid #6b8597;
+  border-radius: 8px;
+  background: white;
+  color: #1f3646;
+  font-weight: 700;
+  text-decoration: none;
+}
+.google-button:hover {
+  background: #f0f7fb;
+}
+.google-button:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 2px;
+}
+.auth-separator {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 22px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.auth-separator::before,
+.auth-separator::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid #d5e0e8;
+}
 .auth-form {
   display: flex;
   flex-direction: column;

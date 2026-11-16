@@ -36,3 +36,9 @@ medislot:
   # comptes de démonstration : seulement en local
   demo-seed: ${DEMO_SEED:false}
   ab-enabled: ${AB_ENABLED:true}
+  # Connexion avec Google : désactivée tant que GOOGLE_CLIENT_ID est vide.
+  google:
+    client-id: ${GOOGLE_CLIENT_ID:}
+    client-secret: ${GOOGLE_CLIENT_SECRET:}
+    # URI déclarée dans la console Google ; vide : adresse vue par le back
+    redirect-uri: ${GOOGLE_REDIRECT_URI:}

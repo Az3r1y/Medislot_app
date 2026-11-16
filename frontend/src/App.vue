@@ -12,6 +12,7 @@ import AppointmentHistory from './components/AppointmentHistory.vue';
 import CancelConfirm from './components/CancelConfirm.vue';
 import { api, ApiError } from './api';
 import { useSession } from './stores/session';
+import { takeGoogleError } from './googleAuth';
 import { useLive } from './composables/useLive';
 import { useAb } from './composables/useAb';
 import { usePendingBookings } from './composables/usePendingBookings';
@@ -370,6 +371,15 @@ window.addEventListener('online', () => {
 });
 onMounted(async () => {
   ab.load();
+  // retour de Google après un échec : message dans la fenêtre de connexion
+  const googleError = takeGoogleError(window.location.href);
+  if (googleError) {
+    // window.history : « history » désigne ici l'historique d'un rendez-vous
+    window.history.replaceState(window.history.state, '', googleError.cleanUrl);
+    openAuth();
+    authError.value = googleError.message;
+  }
+  session.loadProviders();
   await search();
   try {
     await session.load();
@@ -488,6 +498,7 @@ onMounted(async () => {
         v-model:name="name"
         :register="register"
         :busy="busy"
+        :google="session.providers.google"
         :auth-error="authError"
         :field-errors="fieldErrors"
         @submit="authenticate"

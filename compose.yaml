@@ -22,6 +22,10 @@ services:
       DEMO_SEED: "true"
       COOKIE_SECURE: "false"
       AB_ENABLED: "true"
+      # Connexion avec Google : identifiants dans un fichier .env (non versionné), jamais ici.
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-http://localhost:8088/api/login/oauth2/code/google}
       JAVA_TOOL_OPTIONS: -javaagent:/app/opentelemetry-javaagent.jar
       OTEL_SERVICE_NAME: medislot-api
       OTEL_RESOURCE_ATTRIBUTES: service.version=1.0.0

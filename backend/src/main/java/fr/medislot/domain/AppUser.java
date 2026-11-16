@@ -10,7 +10,10 @@ public class AppUser {
     public Long id;
 
     public String email;
+    // null pour un compte créé avec Google
     public String password;
     public String name;
     public String role;
+    // identifiant « sub » du compte Google relié, null sinon
+    public String googleSubject;
 }
