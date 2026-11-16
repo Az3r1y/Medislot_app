@@ -1,0 +1,8 @@
+# Tests d'intégration : HTTP local et données de démonstration.
+server:
+  servlet:
+    session:
+      cookie:
+        secure: false
+medislot:
+  demo-seed: true

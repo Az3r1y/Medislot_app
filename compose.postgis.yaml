@@ -1,0 +1,11 @@
+# Variante PostGIS, dans un projet séparé :
+# docker compose -p medislot-postgis -f compose.yaml -f compose.postgis.yaml up -d --build
+services:
+  db:
+    image: postgis/postgis:18-3.6@sha256:4a43e3c3e5d55b9208240fc71db543b79c638766280c625a425bd0a2390989c4
+    # image publiée pour amd64 seulement
+    platform: linux/amd64
+  backend:
+    environment:
+      SPRING_FLYWAY_LOCATIONS: classpath:db/migration,classpath:db/postgis
+      MEDISLOT_GEO_FINDER: postgis
