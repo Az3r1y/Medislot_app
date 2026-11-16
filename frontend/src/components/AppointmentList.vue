@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import ConvocationButton from './ConvocationButton.vue';
+import CalendarActions from './CalendarActions.vue';
+import CalendarSubscription from './CalendarSubscription.vue';
 import { specialties, dateLabel, timeLabel, type Appointment } from '../types';
 defineProps<{ appointments: Appointment[] }>();
 const emit = defineEmits<{
@@ -55,6 +57,8 @@ const rdv = (a: Appointment) =>
         Historique</button
       ><ConvocationButton v-if="a.status === 'CONFIRMED'" :id="a.id" :rdv="rdv(a)" />
       <p v-else class="convocation-off">Plus de convocation : rendez-vous annulé.</p>
+      <CalendarActions :appointment="a" />
     </div>
   </article>
+  <CalendarSubscription />
 </template>

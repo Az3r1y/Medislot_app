@@ -317,6 +317,250 @@
         ]
       }
     },
+    "/appointments/{id}/calendar.ics": {
+      "get": {
+        "summary": "Télécharger son rendez-vous en iCalendar",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "X-Clinic",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Fichier iCalendar",
+            "content": {
+              "text/calendar": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Session requise"
+          },
+          "404": {
+            "description": "Cabinet, rendez-vous ou lien non accessible"
+          },
+          "400": {
+            "description": "Cabinet manquant ou invalide"
+          }
+        }
+      }
+    },
+    "/calendar/subscription": {
+      "get": {
+        "summary": "Vérifier l'existence d'un abonnement",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "État",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "active"
+                  ],
+                  "properties": {
+                    "active": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Session requise"
+          },
+          "400": {
+            "description": "Cabinet manquant ou invalide"
+          },
+          "404": {
+            "description": "Cabinet, rendez-vous ou lien non accessible"
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-Clinic",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "post": {
+        "summary": "Créer ou régénérer le jeton d'abonnement",
+        "description": "Invalide immédiatement le jeton précédent. Le nouveau jeton est affiché une seule fois. Requiert le jeton CSRF.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Nouveau jeton",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "token"
+                  ],
+                  "properties": {
+                    "token": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Session requise"
+          },
+          "403": {
+            "description": "CSRF invalide"
+          },
+          "400": {
+            "description": "Cabinet manquant ou invalide"
+          },
+          "404": {
+            "description": "Cabinet, rendez-vous ou lien non accessible"
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-Clinic",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "delete": {
+        "summary": "Révoquer l'abonnement",
+        "description": "Requiert le jeton CSRF.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Lien révoqué"
+          },
+          "401": {
+            "description": "Session requise"
+          },
+          "403": {
+            "description": "CSRF invalide"
+          },
+          "400": {
+            "description": "Cabinet manquant ou invalide"
+          },
+          "404": {
+            "description": "Cabinet, rendez-vous ou lien non accessible"
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-Clinic",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/calendar/feed.ics": {
+      "get": {
+        "summary": "Lire le flux iCalendar personnel",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "clinic",
+            "in": "query",
+            "required": true,
+            "description": "Slug du cabinet auquel appartient le lien personnel",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Calendrier",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "text/calendar": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Calendrier inchangé"
+          },
+          "404": {
+            "description": "Lien invalide ou révoqué"
+          },
+          "400": {
+            "description": "Cabinet manquant ou invalide"
+          }
+        }
+      }
+    },
     "/appointments": {
       "get": {
         "summary": "Lire ses rendez-vous",
@@ -1539,7 +1783,8 @@
           "professionalId",
           "professionalName",
           "status",
-          "startsAt"
+          "startsAt",
+          "endsAt"
         ],
         "properties": {
           "id": {
@@ -1571,6 +1816,10 @@
             ]
           },
           "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endsAt": {
             "type": "string",
             "format": "date-time"
           }

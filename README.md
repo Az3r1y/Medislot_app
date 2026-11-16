@@ -15,6 +15,7 @@ Le projet utilise des praticiens et des comptes fictifs pour la démonstration.
 - Réservation, déplacement et annulation des rendez-vous.
 - Historique des opérations, notifications et mise à jour des disponibilités en temps réel par SSE.
 - Téléchargement d’une convocation PDF.
+- Export de rendez-vous au format iCalendar et abonnement personnel à un calendrier en lecture seule.
 - Expérience A/B sur la confirmation de réservation.
 - Traces distribuées avec OpenTelemetry et Jaeger.
 
@@ -194,3 +195,5 @@ Le workflow `release.yml`, déclenché manuellement, relance les vérifications 
 L’interface couvre le parcours patient et la lecture de l’agenda par les secrétaires membres du cabinet. L’administration des praticiens et de leurs horaires n’est pas fournie. Les abonnements SSE sont gérés par chaque instance du backend et ne proposent pas de rejeu historique.
 
 Les comptes et réglages Docker fournis servent à la démonstration. Une utilisation réelle nécessite notamment une configuration des secrets, HTTPS, des sauvegardes et une évaluation des exigences applicables aux données de santé. Ne pas ajouter de données réelles de patients à cet environnement.
+
+Chaque lien d’abonnement calendrier est personnel et limité au cabinet où il a été créé ; sa révocation ne touche pas les liens des autres cabinets. Le lien contient un secret. Il est affiché uniquement lors de sa création et peut être révoqué ou régénéré depuis « Mes rendez-vous ». Le téléchargement ICS est ponctuel ; le client calendrier choisit la fréquence de mise à jour d'un abonnement. Les journaux des éventuels proxys supplémentaires doivent exclure la chaîne de requête de `/api/calendar/feed.ics`.

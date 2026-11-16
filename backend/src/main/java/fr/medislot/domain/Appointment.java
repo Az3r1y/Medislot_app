@@ -13,6 +13,8 @@ public class Appointment extends fr.medislot.tenant.ClinicOwned {
     public Long slotId;
     public String status;
     public java.time.Instant createdAt;
+    public int calendarSequence;
+    public java.time.Instant calendarUpdatedAt;
     public String abExperiment;
     public String abVariant;
     public java.util.UUID abSubjectId;

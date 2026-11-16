@@ -56,6 +56,7 @@ public class AppointmentController {
             String address,
             String city,
             Instant startsAt,
+            Instant endsAt,
             String status) {}
 
     public record HistoryDto(String action, Instant createdAt) {}
@@ -66,7 +67,16 @@ public class AppointmentController {
         Slot s = slots.findById(a.slotId).orElseThrow();
         Professional p = professionals.findById(s.professionalId).orElseThrow();
         return new AppointmentDto(
-                a.id, s.id, p.id, p.name, p.specialty, p.address, p.city, s.startsAt, a.status);
+                a.id,
+                s.id,
+                p.id,
+                p.name,
+                p.specialty,
+                p.address,
+                p.city,
+                s.startsAt,
+                s.endsAt,
+                a.status);
     }
 
     @GetMapping("/appointments")
