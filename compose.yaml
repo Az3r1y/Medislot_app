@@ -1,0 +1,49 @@
+name: medislot-formation
+services:
+  db:
+    image: postgres:18@sha256:2ea8630df176ad090ec92136dee850397c5af8781e4bcf2e4162593691c61bbc
+    environment:
+      POSTGRES_DB: medislot
+      POSTGRES_USER: medislot
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-medislot-local-only}
+    ports: ["127.0.0.1:55432:5432"]
+    volumes: ["pgdata:/var/lib/postgresql"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medislot"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: jdbc:postgresql://db:5432/medislot
+      DB_PASSWORD: ${DB_PASSWORD:-medislot-local-only}
+      # local uniquement : comptes de démonstration, cookies en HTTP
+      DEMO_SEED: "true"
+      COOKIE_SECURE: "false"
+      AB_ENABLED: "true"
+      JAVA_TOOL_OPTIONS: -javaagent:/app/opentelemetry-javaagent.jar
+      OTEL_SERVICE_NAME: medislot-api
+      OTEL_RESOURCE_ATTRIBUTES: service.version=1.0.0
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://collector:4318
+      OTEL_TRACES_SAMPLER: parentbased_always_on
+      OTEL_METRICS_EXPORTER: none
+      OTEL_LOGS_EXPORTER: none
+    depends_on:
+      db: {condition: service_healthy}
+      collector: {condition: service_started}
+    ports: ["127.0.0.1:18080:8080"]
+  frontend:
+    build: ./frontend
+    depends_on: [backend]
+    ports: ["127.0.0.1:8088:8080"]
+  collector:
+    image: otel/opentelemetry-collector-contrib:0.120.0@sha256:85ac41c2db88d0df9bd6145e608a3cb023f5d8443868adbfbbf66efb51087917
+    command: ["--config=/etc/otelcol/collector.yaml"]
+    volumes: ["./observabilite/collector.yaml:/etc/otelcol/collector.yaml:ro"]
+    depends_on: [jaeger]
+  jaeger:
+    image: jaegertracing/jaeger:2.3.0@sha256:6f578f9f7e3cfadf2f46a3c4ceb52614b8520b519eedcb465d63a08136b5cd24
+    ports: ["127.0.0.1:16686:16686"]
+volumes:
+  pgdata:

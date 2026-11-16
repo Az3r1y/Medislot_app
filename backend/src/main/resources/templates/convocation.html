@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8" />
+<title th:text="'Convocation MediSlot n° ' + ${c.number}">Convocation MediSlot</title>
+<meta name="subject" content="Convocation à un rendez-vous" />
+<meta name="author" content="MediSlot" />
+<style>
+ @page { size: A4; margin: 22mm 20mm; }
+ body { font-family: 'Noto Sans'; font-size: 11pt; color: #14213d; }
+ h1 { font-size: 20pt; font-weight: 700; margin: 0 0 4mm; }
+ .brand { font-weight: 700; color: #1d4ed8; font-size: 13pt; }
+ .when { font-size: 16pt; font-weight: 700; margin: 8mm 0 2mm; }
+ .box { border: 1pt solid #cbd5e1; padding: 5mm; margin-top: 6mm; }
+ .label { color: #475569; font-size: 9pt; }
+ .note { margin-top: 10mm; font-size: 9pt; color: #475569; }
+</style>
+</head>
+<body>
+<p class="brand">MediSlot.</p>
+<h1>Convocation</h1>
+<p>Rendez-vous n° <span th:text="${c.number}">12</span></p>
+<p class="when"><span th:text="${c.day}">jeudi 15 janvier 2026</span> à <span th:text="${c.time}">9 h 30</span></p>
+<p class="label">Heure de Paris</p>
+<div class="box">
+ <p class="label">Praticien</p>
+ <p><strong th:text="${c.professional}">Hélène Durand</strong></p>
+ <p th:text="${c.specialty}">Cardiologie</p>
+ <p class="label">Adresse</p>
+ <p th:text="${c.address + ', ' + c.city}">12 rue de la République, Lyon</p>
+</div>
+<p class="note">Présentez-vous quelques minutes avant l'heure. Pour annuler ou déplacer ce rendez-vous, utilisez « Mes rendez-vous » sur MediSlot.</p>
+</body>
+</html>

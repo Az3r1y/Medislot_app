@@ -1,0 +1,38 @@
+server:
+  port: ${PORT:8080}
+  servlet:
+    session:
+      timeout: 30m
+      cookie:
+        http-only: true
+        same-site: lax
+        # désactivé dans compose.yaml pour le HTTP local
+        secure: ${COOKIE_SECURE:true}
+spring:
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/medislot}
+    username: ${DB_USER:medislot}
+    # obligatoire : pas de valeur par défaut
+    password: ${DB_PASSWORD}
+    hikari:
+      # base indisponible : échec en 3 s plutôt qu'en 30 s
+      connection-timeout: 3000
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+  session:
+    jdbc:
+      # tables créées par la migration V3 (Flyway reste seul maître du schéma)
+      initialize-schema: never
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+medislot:
+  # comptes de démonstration : seulement en local
+  demo-seed: ${DEMO_SEED:false}
+  ab-enabled: ${AB_ENABLED:true}
