@@ -14,7 +14,7 @@ backend=$(docker ps -q --filter label=com.docker.compose.service=backend | head 
 [ -n "$backend" ] && docker logs "$backend" 2>&1 | grep -q 'opentelemetry-javaagent - version'
 point "2. Le back démarre avec l'agent Java" $? "aucun conteneur backend lancé, ou pas de ligne de version de l'agent dans son journal"
 
-curl -s -o /dev/null "$APP/api/professionals"; sleep 7   # BatchSpanProcessor de l'agent : ~5 s
+curl -s -o /dev/null -H "X-Clinic: cabinet-a" "$APP/api/professionals"; sleep 7   # BatchSpanProcessor de l'agent : ~5 s
 traces=$(curl -s "$JAEGER/api/traces?service=medislot-api&operation=GET%20%2Fapi%2Fprofessionals&limit=1&lookback=5m")
 echo "$traces" | grep -q '"operationName":"SELECT '
 point "3. Jaeger reçoit medislot-api avec des spans SQL" $? "aucune trace GET /api/professionals avec SELECT dans Jaeger"

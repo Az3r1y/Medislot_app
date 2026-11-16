@@ -6,6 +6,7 @@ Le projet utilise des praticiens et des comptes fictifs pour la démonstration.
 
 ## Fonctionnalités
 
+- Deux cabinets isolés : Paris (`cabinet-a`) et Lyon (`cabinet-b`), avec changement de cabinet dans l’interface.
 - Recherche par nom, spécialité et ville, avec pagination.
 - Recherche de praticiens dans un rayon de 5 km, depuis la position du navigateur ou une adresse.
 - Carte des résultats avec Leaflet et OpenStreetMap ; géocodage des adresses via la Géoplateforme IGN.
@@ -39,17 +40,20 @@ docker compose up -d --build
 
 | Service | Adresse |
 |---|---|
-| Application | [localhost:8088](http://localhost:8088) |
+| Cabinet de Paris | [localhost:8088/c/cabinet-a/](http://localhost:8088/c/cabinet-a/) |
+| Cabinet de Lyon | [localhost:8088/c/cabinet-b/](http://localhost:8088/c/cabinet-b/) |
 | Santé du backend | [localhost:18080/actuator/health](http://localhost:18080/actuator/health) |
 | Jaeger | [localhost:16686](http://localhost:16686) |
 | PostgreSQL | `127.0.0.1:55432` |
 
-Deux comptes patients sont disponibles :
+Comptes de démonstration (mot de passe commun : `MediSlot-demo-2026!`) :
 
-| Adresse e-mail | Mot de passe |
+| Adresse e-mail | Accès |
 |---|---|
-| `patient@medislot.test` | `MediSlot-demo-2026!` |
-| `autre@medislot.test` | `MediSlot-demo-2026!` |
+| `patient@medislot.test` | Patient des cabinets A et B |
+| `autre@medislot.test` | Patient de A uniquement |
+| `secretaire-a@medislot.test` | Agenda de A uniquement |
+| `secretaire-b@medislot.test` | Agenda de B uniquement |
 
 Il est aussi possible de créer un compte depuis l’interface.
 
@@ -82,14 +86,16 @@ Dans un autre terminal, depuis la racine du dépôt :
 ```sh
 cd backend
 export DATABASE_URL=jdbc:postgresql://localhost:55432/medislot
-export DB_PASSWORD=medislot-local-only
+export DB_PASSWORD=medislot-app-local-only
+export MIGRATION_USER=medislot
+export MIGRATION_PASSWORD=medislot-local-only
 export DEMO_SEED=true
 export COOKIE_SECURE=false
 export PORT=18080
 sh mvnw spring-boot:run
 ```
 
-Si `DB_PASSWORD` a été personnalisé pour Docker Compose, utiliser la même valeur ici. Les commandes `export` ci-dessus sont prévues pour Bash ou Zsh ; sous PowerShell, utiliser par exemple `$env:PORT='18080'`, puis `./mvnw.cmd spring-boot:run`.
+Le backend utilise le rôle limité `medislot_app`. Le compte `medislot` sert uniquement aux migrations ; `MIGRATION_PASSWORD` doit correspondre au mot de passe du propriétaire de la base. Les commandes `export` ci-dessus sont prévues pour Bash ou Zsh ; sous PowerShell, utiliser par exemple `$env:PORT='18080'`, puis `./mvnw.cmd spring-boot:run`.
 
 ### Frontend
 
@@ -110,14 +116,16 @@ La chaîne de traces complète, avec l’agent Java, le collecteur et Jaeger, es
 | Variable | Rôle | Valeur par défaut de l’application |
 |---|---|---|
 | `DATABASE_URL` | Connexion JDBC | `jdbc:postgresql://localhost:5432/medislot` |
-| `DB_USER` | Utilisateur PostgreSQL du backend | `medislot` |
-| `DB_PASSWORD` | Mot de passe PostgreSQL | Obligatoire |
+| `DB_USER` | Utilisateur PostgreSQL du backend | `medislot_app` |
+| `DB_PASSWORD` | Mot de passe du rôle applicatif | Obligatoire |
+| `MIGRATION_USER` | Compte exécutant Flyway | `medislot` |
+| `MIGRATION_PASSWORD` | Mot de passe du compte de migration | Obligatoire |
 | `PORT` | Port HTTP du backend | `8080` |
 | `DEMO_SEED` | Initialisation des données fictives | `false` |
 | `COOKIE_SECURE` | Cookies réservés aux connexions HTTPS | `true` |
 | `AB_ENABLED` | Activation de l’expérience A/B | `true` |
 
-Pour la démonstration locale, `compose.yaml` active les données fictives, autorise les cookies en HTTP et utilise `medislot-local-only` comme mot de passe PostgreSQL si `DB_PASSWORD` n’est pas défini.
+Pour la démonstration locale, `compose.yaml` active les données fictives, autorise les cookies en HTTP et utilise deux comptes PostgreSQL : `medislot` pour les migrations (`medislot-local-only` par défaut) et `medislot_app` pour les requêtes (`medislot-app-local-only`). Ces identifiants sont réservés à la démonstration ; les changements de mots de passe doivent être appliqués aussi aux rôles PostgreSQL.
 
 ### Variante PostGIS
 
@@ -183,6 +191,6 @@ Le workflow `release.yml`, déclenché manuellement, relance les vérifications 
 
 ## Limites
 
-L’interface couvre le parcours patient. L’administration des praticiens et de leurs horaires n’est pas fournie. Les abonnements SSE sont gérés par chaque instance du backend et ne proposent pas de rejeu historique.
+L’interface couvre le parcours patient et la lecture de l’agenda par les secrétaires membres du cabinet. L’administration des praticiens et de leurs horaires n’est pas fournie. Les abonnements SSE sont gérés par chaque instance du backend et ne proposent pas de rejeu historique.
 
 Les comptes et réglages Docker fournis servent à la démonstration. Une utilisation réelle nécessite notamment une configuration des secrets, HTTPS, des sauvegardes et une évaluation des exigences applicables aux données de santé. Ne pas ajouter de données réelles de patients à cet environnement.
