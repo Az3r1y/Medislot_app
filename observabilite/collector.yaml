@@ -21,6 +21,9 @@ processors:
       - {key: http.request.header.cookie, action: delete}
       # l'agent Java garde la chaîne de requête (saisies) dans url.query
       - {key: url.query, action: delete}
+      - {key: url.full, action: delete}
+      - {key: http.url, action: delete}
+      - {key: url.original, action: delete}
       - {key: http.target, action: delete}
       - {pattern: "(?i).*(email|password|motif)$", action: delete}
 

@@ -71,6 +71,7 @@ public class SecurityConfig {
                                         .hasRole("ADMIN")
                                         .requestMatchers(
                                                 "/api/csrf",
+                                                "/api/calendar/feed.ics",
                                                 "/api/register",
                                                 "/api/login",
                                                 "/api/professionals/**",
