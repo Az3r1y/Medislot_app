@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 
 @Entity
 @Table(name = "audit_event")
-public class AuditEvent {
+public class AuditEvent extends fr.medislot.tenant.ClinicOwned {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     public Long id;

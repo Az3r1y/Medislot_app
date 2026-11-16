@@ -33,8 +33,11 @@ class PostgisNearbyTest {
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry r) {
         r.add("spring.datasource.url", db::getJdbcUrl);
-        r.add("spring.datasource.username", db::getUsername);
-        r.add("spring.datasource.password", db::getPassword);
+        r.add("spring.flyway.url", db::getJdbcUrl);
+        r.add("spring.flyway.user", db::getUsername);
+        r.add("spring.flyway.password", db::getPassword);
+        r.add("spring.datasource.username", () -> "medislot_app");
+        r.add("spring.datasource.password", () -> "medislot-app-local-only");
         r.add("spring.flyway.locations", () -> "classpath:db/migration,classpath:db/postgis");
         r.add("medislot.geo.finder", () -> "postgis");
     }
@@ -45,6 +48,16 @@ class PostgisNearbyTest {
 
     static List<String> names(NearbyService.Page p) {
         return p.items().stream().map(f -> f.professional().name).toList();
+    }
+
+    @org.junit.jupiter.api.BeforeEach
+    void selectClinic() {
+        fr.medislot.tenant.TenantContext.set(2L);
+    }
+
+    @org.junit.jupiter.api.AfterEach
+    void clearClinic() {
+        fr.medislot.tenant.TenantContext.clear();
     }
 
     @Test

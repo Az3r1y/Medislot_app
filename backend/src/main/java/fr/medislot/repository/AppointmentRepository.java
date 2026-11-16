@@ -4,6 +4,7 @@ import fr.medislot.domain.Appointment;
 
 import org.springframework.data.jpa.repository.*;
 
+@org.springframework.transaction.annotation.Transactional(readOnly = true)
 public interface AppointmentRepository extends JpaRepository<Appointment, Long> {
     boolean existsBySlotIdAndStatus(Long slotId, String status);
 

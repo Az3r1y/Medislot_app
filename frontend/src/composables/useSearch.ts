@@ -1,9 +1,11 @@
+import { clinicSnapshot, ClinicChangedError } from '../clinicRequest';
 import { ref, type Ref } from 'vue';
 import { api } from '../api';
 import { nearbyParams, type Position } from '../geo';
 import type { Page, Professional, Slot } from '../types';
 
 const SEARCH_CACHE = 'medislot-search';
+const cacheKey = () => `${SEARCH_CACHE}:${clinicSnapshot()?.slug ?? 'none'}`;
 const PAGE_SIZE = 6;
 
 /** Recherche de praticiens : critères, résultats, créneaux, et dernière liste gardée pour le hors ligne. */
@@ -45,16 +47,18 @@ export function useSearch(deps: {
       doctors.value = result.items;
       total.value = result.total;
       await loadSlots();
+      if (current !== generation) return;
       deps.online.value = true;
       // Pas de cache autour d'une position : les distances permettraient de la retrouver.
       try {
         if (!near.value)
           localStorage.setItem(
-            SEARCH_CACHE,
+            cacheKey(),
             JSON.stringify({ doctors: doctors.value, total: total.value, slots: slots.value }),
           );
       } catch {}
     } catch (e) {
+      if (current !== generation || e instanceof ClinicChangedError) return;
       deps.error.value = deps.describe(e);
       if (!deps.online.value && !doctors.value.length) restoreSearch();
     } finally {
@@ -63,18 +67,19 @@ export function useSearch(deps: {
   }
 
   async function loadSlots() {
+    const current = generation;
     const entries = await Promise.all(
       doctors.value.map(
         async (p) => [p.id, await api<Slot[]>(`/professionals/${p.id}/slots`)] as const,
       ),
     );
-    slots.value = Object.fromEntries(entries);
+    if (current === generation) slots.value = Object.fromEntries(entries);
   }
 
   // Hors ligne : dernière recherche connue, en lecture seule.
   function restoreSearch() {
     try {
-      const cached = JSON.parse(localStorage.getItem(SEARCH_CACHE) || 'null');
+      const cached = JSON.parse(localStorage.getItem(cacheKey()) || 'null');
       if (cached) {
         doctors.value = cached.doctors;
         total.value = cached.total;
@@ -108,7 +113,24 @@ export function useSearch(deps: {
     search();
   }
 
+  function clear() {
+    generation++;
+    doctors.value = [];
+    slots.value = {};
+    total.value = 0;
+    loading.value = false;
+    near.value = null;
+    q.value = '';
+    city.value = '';
+    specialty.value = '';
+    page.value = 0;
+    try {
+      localStorage.removeItem(SEARCH_CACHE);
+    } catch {}
+  }
+
   return {
+    clear,
     q,
     city,
     specialty,

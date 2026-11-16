@@ -13,6 +13,7 @@ import java.time.*;
 
 @RestController
 @RequestMapping("/api/professionals")
+@org.springframework.transaction.annotation.Transactional
 public class DirectoryController {
     private final ProfessionalRepository professionals;
     private final SlotRepository slots;

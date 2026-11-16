@@ -17,10 +17,15 @@ import org.springframework.web.server.ResponseStatusException;
 public class AuthController {
     private final UserRepository users;
     private final PasswordEncoder encoder;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbc;
 
-    public AuthController(UserRepository users, PasswordEncoder encoder) {
+    public AuthController(
+            UserRepository users,
+            PasswordEncoder encoder,
+            org.springframework.jdbc.core.JdbcTemplate jdbc) {
         this.users = users;
         this.encoder = encoder;
+        this.jdbc = jdbc;
     }
 
     public record Identity(Long id, String name, String email, String role) {}
@@ -49,6 +54,7 @@ public class AuthController {
         return new Identity(u.id, u.name, u.email, u.role);
     }
 
+    @org.springframework.transaction.annotation.Transactional
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
     public Identity register(@Valid @RequestBody Registration input) {
@@ -66,6 +72,10 @@ public class AuthController {
         u.password = encoder.encode(input.password());
         u.role = "PATIENT";
         users.saveAndFlush(u);
+        jdbc.update(
+                "insert into membership(user_id, clinic_id) values (?, ?)",
+                u.id,
+                fr.medislot.tenant.TenantContext.required());
         return new Identity(u.id, u.name, u.email, u.role);
     }
 }
