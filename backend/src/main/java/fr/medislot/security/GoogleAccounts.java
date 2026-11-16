@@ -28,9 +28,11 @@ public class GoogleAccounts {
     public static final String INVALID_PROFILE = "invalid_profile";
 
     private final UserRepository users;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbc;
 
-    public GoogleAccounts(UserRepository users) {
+    public GoogleAccounts(UserRepository users, org.springframework.jdbc.core.JdbcTemplate jdbc) {
         this.users = users;
+        this.jdbc = jdbc;
     }
 
     @Transactional
@@ -50,7 +52,12 @@ public class GoogleAccounts {
         u.role = "PATIENT";
         u.googleSubject = subject;
         try {
-            return users.saveAndFlush(u);
+            users.saveAndFlush(u);
+            jdbc.update(
+                    "insert into membership(user_id,clinic_id) values (?,?)",
+                    u.id,
+                    fr.medislot.tenant.TenantContext.required());
+            return u;
         } catch (DataIntegrityViolationException e) {
             // deux premières connexions simultanées, ou adresse prise entre-temps
             throw refused(ACCOUNT_EXISTS);

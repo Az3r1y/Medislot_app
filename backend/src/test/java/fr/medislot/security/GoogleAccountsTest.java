@@ -14,10 +14,21 @@ import java.util.Optional;
 
 class GoogleAccountsTest {
     final UserRepository users = mock(UserRepository.class);
-    final GoogleAccounts accounts = new GoogleAccounts(users);
+    final GoogleAccounts accounts =
+            new GoogleAccounts(users, mock(org.springframework.jdbc.core.JdbcTemplate.class));
 
     static String code(OAuth2AuthenticationException e) {
         return e.getError().getErrorCode();
+    }
+
+    @org.junit.jupiter.api.BeforeEach
+    void clinic() {
+        fr.medislot.tenant.TenantContext.set(1L);
+    }
+
+    @org.junit.jupiter.api.AfterEach
+    void clearClinic() {
+        fr.medislot.tenant.TenantContext.clear();
     }
 
     @Test

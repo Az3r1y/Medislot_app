@@ -36,8 +36,11 @@ class GoogleLoginTest {
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry r) {
         r.add("spring.datasource.url", db::getJdbcUrl);
-        r.add("spring.datasource.username", db::getUsername);
-        r.add("spring.datasource.password", db::getPassword);
+        r.add("spring.flyway.url", db::getJdbcUrl);
+        r.add("spring.flyway.user", db::getUsername);
+        r.add("spring.flyway.password", db::getPassword);
+        r.add("spring.datasource.username", () -> "medislot_app");
+        r.add("spring.datasource.password", () -> "medislot-app-local-only");
         r.add("medislot.google.client-id", () -> "test-client.apps.googleusercontent.com");
         r.add("medislot.google.client-secret", () -> "test-secret");
         r.add("medislot.google.redirect-uri", () -> REDIRECT);
@@ -46,6 +49,7 @@ class GoogleLoginTest {
     @LocalServerPort int port;
     @Autowired GoogleAccounts accounts;
     @Autowired UserRepository users;
+    @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
 
     final HttpClient client =
             HttpClient.newBuilder()
@@ -59,6 +63,16 @@ class GoogleLoginTest {
                 HttpResponse.BodyHandlers.ofString());
     }
 
+    @org.junit.jupiter.api.BeforeEach
+    void clinic() {
+        fr.medislot.tenant.TenantContext.set(1L);
+    }
+
+    @org.junit.jupiter.api.AfterEach
+    void clearClinic() {
+        fr.medislot.tenant.TenantContext.clear();
+    }
+
     @Test
     void providersAnnounceGoogle() throws Exception {
         var r = get("/api/auth/providers");
@@ -68,7 +82,7 @@ class GoogleLoginTest {
 
     @Test
     void authorizationRedirectsToGoogleWithStateNonceAndPkce() throws Exception {
-        var r = get("/api/oauth2/authorization/google");
+        var r = get("/api/oauth2/authorization/google?clinic=cabinet-b");
         assertEquals(302, r.statusCode());
         String location = r.headers().firstValue("Location").orElseThrow();
         assertTrue(location.startsWith("https://accounts.google.com/o/oauth2/v2/auth?"), location);
@@ -95,12 +109,16 @@ class GoogleLoginTest {
     @Test
     void userCancellationIsReported() throws Exception {
         String location =
-                get("/api/oauth2/authorization/google").headers().firstValue("Location").get();
+                get("/api/oauth2/authorization/google?clinic=cabinet-b")
+                        .headers()
+                        .firstValue("Location")
+                        .get();
         String state = location.replaceAll(".*[?&]state=([^&]+).*", "$1");
         var r = get("/api/login/oauth2/code/google?error=access_denied&state=" + state);
         assertEquals(302, r.statusCode());
         assertEquals(
-                "/?google_error=access_denied", r.headers().firstValue("Location").orElseThrow());
+                "/c/cabinet-b/?google_error=access_denied",
+                r.headers().firstValue("Location").orElseThrow());
         assertEquals(401, get("/api/me").statusCode());
     }
 
@@ -109,12 +127,18 @@ class GoogleLoginTest {
         var created = accounts.resolve("it-sub-1", "Google.User@Exemple.fr", true, "Google User");
         assertNotNull(created.id);
         assertNull(created.password);
+        assertEquals(
+                1,
+                jdbc.queryForObject(
+                        "select count(*) from membership where user_id=? and clinic_id=1",
+                        Integer.class,
+                        created.id));
         var again = accounts.resolve("it-sub-1", "autre-adresse@exemple.fr", true, "Renamed");
         assertEquals(created.id, again.id);
         assertEquals("google.user@exemple.fr", again.email);
     }
 
-    // La contrainte V6 interdit un compte sans aucun moyen de connexion.
+    // La contrainte V10 interdit un compte sans aucun moyen de connexion.
     @Test
     void accountWithoutAnyCredentialIsRejectedByDatabase() {
         var u = new AppUser();
@@ -142,5 +166,11 @@ class GoogleLoginTest {
                                         "username=sans-mot-de-passe%40exemple.fr&password=x"))
                         .build();
         assertEquals(401, client.send(login, HttpResponse.BodyHandlers.discarding()).statusCode());
+    }
+
+    @Test
+    void missingAndUnknownClinicAreRejected() throws Exception {
+        assertEquals(400, get("/api/oauth2/authorization/google").statusCode());
+        assertEquals(404, get("/api/oauth2/authorization/google?clinic=inconnu").statusCode());
     }
 }

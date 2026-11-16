@@ -96,6 +96,7 @@ public class BookingService {
         a.slotId = s.id;
         a.status = "CONFIRMED";
         a.createdAt = Instant.now();
+        a.calendarUpdatedAt = a.createdAt;
         ab.ifPresent(
                 x -> {
                     a.abExperiment = x.experiment();
@@ -105,7 +106,11 @@ public class BookingService {
         appointments.saveAndFlush(a);
         Span.current().setAttribute("medislot.appointment.id", a.id);
         record(a, "CREATED", "Votre rendez-vous est confirmé.");
-        events.publishEvent(new BookingChanged(patient, List.of(s.professionalId)));
+        events.publishEvent(
+                new BookingChanged(
+                        fr.medislot.tenant.TenantContext.required(),
+                        patient,
+                        List.of(s.professionalId)));
         return a;
     }
 
@@ -115,9 +120,15 @@ public class BookingService {
         Slot s = lock(a.slotId);
         if (a.status.equals("CANCELLED")) return a;
         a.status = "CANCELLED";
+        a.calendarSequence++;
+        a.calendarUpdatedAt = Instant.now();
         appointments.saveAndFlush(a);
         record(a, "CANCELLED", "Votre rendez-vous a été annulé.");
-        events.publishEvent(new BookingChanged(a.patientId, List.of(s.professionalId)));
+        events.publishEvent(
+                new BookingChanged(
+                        fr.medislot.tenant.TenantContext.required(),
+                        a.patientId,
+                        List.of(s.professionalId)));
         return a;
     }
 
@@ -132,11 +143,15 @@ public class BookingService {
         Slot old = first.id.equals(oldId) ? first : second;
         check(target);
         a.slotId = target.id;
+        a.calendarSequence++;
+        a.calendarUpdatedAt = Instant.now();
         appointments.saveAndFlush(a);
         record(a, "RESCHEDULED", "Votre rendez-vous a été déplacé.");
         events.publishEvent(
                 new BookingChanged(
-                        a.patientId, List.of(old.professionalId, target.professionalId)));
+                        fr.medislot.tenant.TenantContext.required(),
+                        a.patientId,
+                        List.of(old.professionalId, target.professionalId)));
         return a;
     }
 

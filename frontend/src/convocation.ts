@@ -1,3 +1,4 @@
+import { clinicHeaders, clinicSnapshot, assertSameClinic } from './clinicRequest';
 // Convocation PDF. Tout ce qui touche à la fenêtre passe par `browser`, remplacé dans les tests.
 
 export const MESSAGES: Record<number, string> = {
@@ -28,21 +29,25 @@ export async function fetchConvocation(
   id: number,
   download = false,
 ): Promise<{ blob: Blob; filename: string }> {
+  const snapshot = clinicSnapshot();
   let r: Response;
   try {
     r = await fetch(`/api/appointments/${id}/convocation.pdf${download ? '?download=true' : ''}`, {
       credentials: 'same-origin',
-      headers: { Accept: 'application/pdf' },
+      headers: { Accept: 'application/pdf', ...clinicHeaders() },
     });
   } catch {
     throw new ConvocationError(OFFLINE);
   }
+  assertSameClinic(snapshot);
   // Une erreur a aussi un corps : sans ce test, on enregistrerait du JSON sous un nom .pdf.
   if (!r.ok) throw new ConvocationError(MESSAGES[r.status] ?? FALLBACK, r.status);
   // Un 200 en HTML (repli de Nginx, portail captif) n'est pas une convocation.
   if (!(r.headers.get('Content-Type') ?? '').startsWith('application/pdf'))
     throw new ConvocationError(FALLBACK, r.status);
-  return { blob: await r.blob(), filename: filenameFrom(r.headers.get('Content-Disposition'), id) };
+  const blob = await r.blob();
+  assertSameClinic(snapshot);
+  return { blob, filename: filenameFrom(r.headers.get('Content-Disposition'), id) };
 }
 
 export interface Tab {

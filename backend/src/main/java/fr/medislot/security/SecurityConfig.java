@@ -67,16 +67,26 @@ public class SecurityConfig {
             HttpSecurity http,
             LoginAttempts attempts,
             ObjectProvider<ClientRegistrationRepository> google,
-            GoogleOidcUserService googleUsers)
+            GoogleOidcUserService googleUsers,
+            fr.medislot.tenant.ClinicDirectory clinics)
             throws Exception {
-        if (google.getIfAvailable() != null)
+        var registration = google.getIfAvailable();
+        if (registration != null) {
+            var flow = new GoogleClinicFlow(registration, clinics);
+            http.addFilterBefore(
+                    flow,
+                    org.springframework.security.oauth2.client.web
+                            .OAuth2AuthorizationRequestRedirectFilter.class);
             http.oauth2Login(
                     o ->
                             o.authorizationEndpoint(
                                             a ->
-                                                    a.baseUri(
-                                                            GoogleLoginConfig
-                                                                    .AUTHORIZATION_BASE_URI))
+                                                    a.authorizationRequestResolver(flow)
+                                                            .authorizationRequestRepository(
+                                                                    flow.repository())
+                                                            .baseUri(
+                                                                    GoogleLoginConfig
+                                                                            .AUTHORIZATION_BASE_URI))
                                     .redirectionEndpoint(
                                             r ->
                                                     r.baseUri(
@@ -87,7 +97,9 @@ public class SecurityConfig {
                                     // session (effacés à la déconnexion), pas en mémoire du serveur
                                     .authorizedClientRepository(
                                             new HttpSessionOAuth2AuthorizedClientRepository())
-                                    .successHandler((req, res, auth) -> redirect(res, "/"))
+                                    .successHandler(
+                                            (req, res, auth) ->
+                                                    redirect(res, GoogleClinicFlow.returnPath(req)))
                                     .failureHandler(
                                             (req, res, ex) -> {
                                                 String code =
@@ -100,8 +112,13 @@ public class SecurityConfig {
                                                                                         .getErrorCode())
                                                                 ? o2.getError().getErrorCode()
                                                                 : "failed";
-                                                redirect(res, "/?google_error=" + code);
+                                                redirect(
+                                                        res,
+                                                        GoogleClinicFlow.returnPath(req)
+                                                                + "?google_error="
+                                                                + code);
                                             }));
+        }
         // Verrou par compte, avant la vérification du mot de passe.
         http.addFilterBefore(
                 (req, res, chain) -> {
@@ -118,16 +135,23 @@ public class SecurityConfig {
                     chain.doFilter(req, res);
                 },
                 UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(
+                new fr.medislot.tenant.TenantFilter(clinics),
+                org.springframework.security.web.access.intercept.AuthorizationFilter.class);
         http.authorizeHttpRequests(
                         a ->
                                 a.dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR)
                                         .permitAll()
                                         // Avant le permitAll de /api/ab/** : la première règle qui
                                         // correspond s'applique.
+                                        .requestMatchers("/api/clinic/agenda")
+                                        .hasAnyRole("SECRETARY", "ADMIN")
                                         .requestMatchers("/api/ab/metrics")
                                         .hasRole("ADMIN")
                                         .requestMatchers(
                                                 "/api/csrf",
+                                                "/api/clinics",
+                                                "/api/calendar/feed.ics",
                                                 "/api/register",
                                                 "/api/login",
                                                 "/api/auth/providers",

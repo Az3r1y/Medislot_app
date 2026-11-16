@@ -32,13 +32,26 @@ class BookingIntegrationTest {
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry r) {
         r.add("spring.datasource.url", db::getJdbcUrl);
-        r.add("spring.datasource.username", db::getUsername);
-        r.add("spring.datasource.password", db::getPassword);
+        r.add("spring.flyway.url", db::getJdbcUrl);
+        r.add("spring.flyway.user", db::getUsername);
+        r.add("spring.flyway.password", db::getPassword);
+        r.add("spring.datasource.username", () -> "medislot_app");
+        r.add("spring.datasource.password", () -> "medislot-app-local-only");
     }
 
     @Autowired BookingService booking;
     @Autowired SlotRepository slots;
     @Autowired AuditRepository audit;
+
+    @org.junit.jupiter.api.BeforeEach
+    void selectClinic() {
+        fr.medislot.tenant.TenantContext.set(1L);
+    }
+
+    @org.junit.jupiter.api.AfterEach
+    void clearClinic() {
+        fr.medislot.tenant.TenantContext.clear();
+    }
 
     @Test
     void concurrentBookingsProduceOneWinner() throws Exception {
@@ -51,11 +64,14 @@ class BookingIntegrationTest {
             Callable<Integer> task =
                     () -> {
                         start.await();
+                        fr.medislot.tenant.TenantContext.set(1L);
                         try {
                             booking.book("patient@medislot.test", slot);
                             return 201;
                         } catch (ResponseStatusException e) {
                             return e.getStatusCode().value();
+                        } finally {
+                            fr.medislot.tenant.TenantContext.clear();
                         }
                     };
             var a = pool.submit(task);

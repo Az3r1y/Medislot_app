@@ -1,7 +1,11 @@
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
+import { useClinic } from '../stores/clinic';
+import { useSession } from '../stores/session';
 import { api, ApiError, refreshCsrf } from '../api';
 import { dateLabel, timeLabel, type Appointment } from '../types';
 export interface PendingBooking {
+  clinicSlug: string;
+  userId: number;
   slotId: number;
   professionalName: string;
   startsAt: string;
@@ -14,7 +18,10 @@ const KEY = 'medislot-pending-bookings',
   MAX_ATTEMPTS = 3;
 const read = (): PendingBooking[] => {
   try {
-    return JSON.parse(localStorage.getItem(KEY) || '[]');
+    const items: PendingBooking[] = JSON.parse(localStorage.getItem(KEY) || '[]');
+    return items.filter(
+      (item) => typeof item.clinicSlug === 'string' && typeof item.userId === 'number',
+    );
   } catch {
     return [];
   }
@@ -24,34 +31,60 @@ export function usePendingBookings(
   notify: (text: string, ok: boolean) => void,
   onExpired: () => void,
 ) {
-  const pending = ref<PendingBooking[]>(read());
+  const all = ref<PendingBooking[]>(read());
+  const clinic = useClinic();
+  const session = useSession();
+  const pending = computed(() =>
+    all.value.filter((b) => b.clinicSlug === clinic.slug && b.userId === session.user?.id),
+  );
   let flushing = false;
   const save = () => {
     try {
-      localStorage.setItem(KEY, JSON.stringify(pending.value));
+      localStorage.setItem(KEY, JSON.stringify(all.value));
     } catch {}
   };
-  const drop = (slotId: number) => {
-    pending.value = pending.value.filter((p) => p.slotId !== slotId);
+  const drop = (booking: PendingBooking) => {
+    all.value = all.value.filter(
+      (p) =>
+        p.slotId !== booking.slotId ||
+        p.userId !== booking.userId ||
+        p.clinicSlug !== booking.clinicSlug,
+    );
     save();
   };
   const label = (b: PendingBooking) =>
     `${b.professionalName}, ${dateLabel(b.startsAt)} à ${timeLabel(b.startsAt)}`;
-  function add(b: Omit<PendingBooking, 'queuedAt' | 'attempts'>) {
+  function add(b: Omit<PendingBooking, 'queuedAt' | 'attempts' | 'clinicSlug' | 'userId'>) {
+    if (!session.user) return;
     if (!pending.value.some((p) => p.slotId === b.slotId))
-      pending.value.push({ ...b, queuedAt: new Date().toISOString(), attempts: 0 });
+      all.value.push({
+        ...b,
+        clinicSlug: clinic.slug,
+        userId: session.user.id,
+        queuedAt: new Date().toISOString(),
+        attempts: 0,
+      });
     save();
   }
   /** Rejoue la file ; renvoie true si au moins une réservation a été tranchée (confirmée ou abandonnée). */
   async function flush() {
     if (flushing || !pending.value.length) return false;
+    const currentClinic = clinic.slug,
+      currentUser = session.user?.id,
+      revision = clinic.revision;
     flushing = true;
     let changed = false;
     try {
       await refreshCsrf(); // le jeton a pu expirer pendant la coupure
       for (const b of [...pending.value]) {
+        if (
+          currentClinic !== clinic.slug ||
+          currentUser !== session.user?.id ||
+          revision !== clinic.revision
+        )
+          break;
         if (Date.now() - Date.parse(b.queuedAt) > MAX_AGE || Date.parse(b.startsAt) <= Date.now()) {
-          drop(b.slotId);
+          drop(b);
           changed = true;
           notify(
             `Rendez-vous non envoyé (${label(b)}) : la coupure a duré trop longtemps. Choisissez un nouveau créneau.`,
@@ -65,7 +98,7 @@ export function usePendingBookings(
             body: JSON.stringify({ slotId: b.slotId }),
             headers: b.measure ? { 'X-AB-Measure': '1' } : {},
           });
-          drop(b.slotId);
+          drop(b);
           changed = true;
           notify(`Rendez-vous confirmé après la coupure : ${label(b)}.`, true);
         } catch (e) {
@@ -73,7 +106,13 @@ export function usePendingBookings(
           if (e.status === 409) {
             // la première tentative a pu aboutir sans que la réponse arrive : on vérifie avant de conclure
             const mine = await api<Appointment[]>('/appointments').catch(() => [] as Appointment[]);
-            drop(b.slotId);
+            if (
+              currentClinic !== clinic.slug ||
+              currentUser !== session.user?.id ||
+              revision !== clinic.revision
+            )
+              break;
+            drop(b);
             changed = true;
             if (mine.some((a) => a.slotId === b.slotId && a.status === 'CONFIRMED'))
               notify(`Rendez-vous confirmé : ${label(b)}.`, true);
@@ -91,7 +130,7 @@ export function usePendingBookings(
           b.attempts++;
           save();
           if (b.attempts >= MAX_ATTEMPTS) {
-            drop(b.slotId);
+            drop(b);
             changed = true;
             notify(
               `Échec de l’enregistrement (${label(b)}) : ${e.message} Le rendez-vous n’a pas été réservé.`,

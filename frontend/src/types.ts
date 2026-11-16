@@ -26,6 +26,7 @@ export interface Appointment {
   address: string;
   city: string;
   startsAt: string;
+  endsAt: string;
   status: 'CONFIRMED' | 'CANCELLED';
 }
 export interface Identity {

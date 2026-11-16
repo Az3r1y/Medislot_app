@@ -18,6 +18,7 @@ import java.time.Instant;
 
 @RestController
 @RequestMapping("/api")
+@org.springframework.transaction.annotation.Transactional
 public class AppointmentController {
     private final BookingService service;
     private final AbService ab;
@@ -55,17 +56,27 @@ public class AppointmentController {
             String address,
             String city,
             Instant startsAt,
+            Instant endsAt,
             String status) {}
 
     public record HistoryDto(String action, Instant createdAt) {}
 
     public record NotificationDto(Long id, String message, Instant createdAt) {}
 
-    private AppointmentDto dto(Appointment a) {
+    public AppointmentDto dto(Appointment a) {
         Slot s = slots.findById(a.slotId).orElseThrow();
         Professional p = professionals.findById(s.professionalId).orElseThrow();
         return new AppointmentDto(
-                a.id, s.id, p.id, p.name, p.specialty, p.address, p.city, s.startsAt, a.status);
+                a.id,
+                s.id,
+                p.id,
+                p.name,
+                p.specialty,
+                p.address,
+                p.city,
+                s.startsAt,
+                s.endsAt,
+                a.status);
     }
 
     @GetMapping("/appointments")

@@ -57,6 +57,9 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "Cabinet inconnu, accès non autorisé ou ressource absente du cabinet."
           }
         },
         "parameters": [
@@ -130,6 +133,17 @@
               "maximum": 50,
               "default": 5
             }
+          },
+          {
+            "name": "X-Clinic",
+            "in": "header",
+            "required": true,
+            "description": "Slug du cabinet courant. Obligatoire, sauf pour SSE qui accepte aussi le paramètre clinic.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+              "maxLength": 63
+            }
           }
         ],
         "description": "Sans lat/lon : recherche par nom, ville et spécialité, triée par nom. Avec lat/lon : praticiens dans le cercle de radiusKm, du plus proche au plus loin (puis par nom, puis id), paginés après le tri. Refus en 400, dans l'ordre : position incomplète, latitude, longitude, rayon, pagination ; type invalide (lat=abc) : « Paramètre invalide : lat. »"
@@ -158,8 +172,24 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Cabinet manquant ou invalide."
           }
-        }
+        },
+        "parameters": [
+          {
+            "name": "X-Clinic",
+            "in": "header",
+            "required": true,
+            "description": "Slug du cabinet courant. Obligatoire, sauf pour SSE qui accepte aussi le paramètre clinic.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+              "maxLength": 63
+            }
+          }
+        ]
       },
       "parameters": [
         {
@@ -199,8 +229,24 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Cabinet manquant ou invalide."
           }
-        }
+        },
+        "parameters": [
+          {
+            "name": "X-Clinic",
+            "in": "header",
+            "required": true,
+            "description": "Slug du cabinet courant. Obligatoire, sauf pour SSE qui accepte aussi le paramètre clinic.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+              "maxLength": 63
+            }
+          }
+        ]
       },
       "parameters": [
         {
@@ -272,8 +318,25 @@
         "responses": {
           "302": {
             "description": "Redirection vers Google avec state, nonce et PKCE. 404 si Google n’est pas configuré."
+          },
+          "400": {
+            "description": "Cabinet manquant ou invalide"
+          },
+          "404": {
+            "description": "Cabinet inconnu ou Google non configuré"
           }
-        }
+        },
+        "parameters": [
+          {
+            "name": "clinic",
+            "in": "query",
+            "required": true,
+            "description": "Cabinet choisi, conservé côté serveur dans la demande OAuth liée au state.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
       }
     },
     "/login/oauth2/code/google": {
@@ -308,7 +371,7 @@
         ],
         "responses": {
           "302": {
-            "description": "Succès : session ouverte et redirection vers /. Échec : redirection vers /?google_error=account_exists|email_not_verified|access_denied|failed."
+            "description": "Retour vers /c/<slug>/, cabinet retrouvé dans la demande OAuth en session. En cas d’échec, paramètre google_error limité aux codes connus."
           }
         }
       }
@@ -345,6 +408,250 @@
         ]
       }
     },
+    "/appointments/{id}/calendar.ics": {
+      "get": {
+        "summary": "Télécharger son rendez-vous en iCalendar",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "X-Clinic",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Fichier iCalendar",
+            "content": {
+              "text/calendar": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Session requise"
+          },
+          "404": {
+            "description": "Cabinet, rendez-vous ou lien non accessible"
+          },
+          "400": {
+            "description": "Cabinet manquant ou invalide"
+          }
+        }
+      }
+    },
+    "/calendar/subscription": {
+      "get": {
+        "summary": "Vérifier l'existence d'un abonnement",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "État",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "active"
+                  ],
+                  "properties": {
+                    "active": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Session requise"
+          },
+          "400": {
+            "description": "Cabinet manquant ou invalide"
+          },
+          "404": {
+            "description": "Cabinet, rendez-vous ou lien non accessible"
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-Clinic",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "post": {
+        "summary": "Créer ou régénérer le jeton d'abonnement",
+        "description": "Invalide immédiatement le jeton précédent. Le nouveau jeton est affiché une seule fois. Requiert le jeton CSRF.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Nouveau jeton",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "token"
+                  ],
+                  "properties": {
+                    "token": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Session requise"
+          },
+          "403": {
+            "description": "CSRF invalide"
+          },
+          "400": {
+            "description": "Cabinet manquant ou invalide"
+          },
+          "404": {
+            "description": "Cabinet, rendez-vous ou lien non accessible"
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-Clinic",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "delete": {
+        "summary": "Révoquer l'abonnement",
+        "description": "Requiert le jeton CSRF.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Lien révoqué"
+          },
+          "401": {
+            "description": "Session requise"
+          },
+          "403": {
+            "description": "CSRF invalide"
+          },
+          "400": {
+            "description": "Cabinet manquant ou invalide"
+          },
+          "404": {
+            "description": "Cabinet, rendez-vous ou lien non accessible"
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-Clinic",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/calendar/feed.ics": {
+      "get": {
+        "summary": "Lire le flux iCalendar personnel",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "clinic",
+            "in": "query",
+            "required": true,
+            "description": "Slug du cabinet auquel appartient le lien personnel",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Calendrier",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "text/calendar": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Calendrier inchangé"
+          },
+          "404": {
+            "description": "Lien invalide ou révoqué"
+          },
+          "400": {
+            "description": "Cabinet manquant ou invalide"
+          }
+        }
+      }
+    },
     "/appointments": {
       "get": {
         "summary": "Lire ses rendez-vous",
@@ -371,11 +678,30 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Cabinet manquant ou invalide."
+          },
+          "404": {
+            "description": "Cabinet inconnu, accès non autorisé ou ressource absente du cabinet."
           }
         },
         "security": [
           {
             "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Clinic",
+            "in": "header",
+            "required": true,
+            "description": "Slug du cabinet courant. Obligatoire, sauf pour SSE qui accepte aussi le paramètre clinic.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+              "maxLength": 63
+            }
           }
         ]
       },
@@ -457,6 +783,17 @@
               "type": "string"
             },
             "description": "Valeur issue de GET /csrf, à renouveler après connexion."
+          },
+          {
+            "name": "X-Clinic",
+            "in": "header",
+            "required": true,
+            "description": "Slug du cabinet courant. Obligatoire, sauf pour SSE qui accepte aussi le paramètre clinic.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+              "maxLength": 63
+            }
           }
         ],
         "requestBody": {
@@ -504,11 +841,27 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Cabinet manquant ou invalide."
           }
         },
         "security": [
           {
             "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Clinic",
+            "in": "header",
+            "required": true,
+            "description": "Slug du cabinet courant. Obligatoire, sauf pour SSE qui accepte aussi le paramètre clinic.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+              "maxLength": 63
+            }
           }
         ]
       },
@@ -590,6 +943,17 @@
               "type": "string"
             },
             "description": "Valeur issue de GET /csrf, à renouveler après connexion."
+          },
+          {
+            "name": "X-Clinic",
+            "in": "header",
+            "required": true,
+            "description": "Slug du cabinet courant. Obligatoire, sauf pour SSE qui accepte aussi le paramètre clinic.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+              "maxLength": 63
+            }
           }
         ],
         "requestBody": {
@@ -658,6 +1022,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Cabinet manquant ou invalide."
           }
         },
         "security": [
@@ -674,6 +1041,17 @@
               "type": "string"
             },
             "description": "Valeur issue de GET /csrf, à renouveler après connexion."
+          },
+          {
+            "name": "X-Clinic",
+            "in": "header",
+            "required": true,
+            "description": "Slug du cabinet courant. Obligatoire, sauf pour SSE qui accepte aussi le paramètre clinic.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+              "maxLength": 63
+            }
           }
         ]
       },
@@ -725,11 +1103,27 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Cabinet manquant ou invalide."
           }
         },
         "security": [
           {
             "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Clinic",
+            "in": "header",
+            "required": true,
+            "description": "Slug du cabinet courant. Obligatoire, sauf pour SSE qui accepte aussi le paramètre clinic.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+              "maxLength": 63
+            }
           }
         ]
       },
@@ -771,11 +1165,30 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Cabinet manquant ou invalide."
+          },
+          "404": {
+            "description": "Cabinet inconnu, accès non autorisé ou ressource absente du cabinet."
           }
         },
         "security": [
           {
             "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Clinic",
+            "in": "header",
+            "required": true,
+            "description": "Slug du cabinet courant. Obligatoire, sauf pour SSE qui accepte aussi le paramètre clinic.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+              "maxLength": 63
+            }
           }
         ]
       }
@@ -859,6 +1272,9 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "Cabinet inconnu, accès non autorisé ou ressource absente du cabinet."
           }
         },
         "parameters": [
@@ -870,6 +1286,17 @@
               "type": "string"
             },
             "description": "Valeur issue de GET /csrf, à renouveler après connexion."
+          },
+          {
+            "name": "X-Clinic",
+            "in": "header",
+            "required": true,
+            "description": "Slug du cabinet courant. Obligatoire, sauf pour SSE qui accepte aussi le paramètre clinic.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+              "maxLength": 63
+            }
           }
         ],
         "requestBody": {
@@ -983,8 +1410,36 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Cabinet manquant ou invalide."
+          },
+          "404": {
+            "description": "Cabinet inconnu, accès non autorisé ou ressource absente du cabinet."
           }
-        }
+        },
+        "parameters": [
+          {
+            "name": "X-Clinic",
+            "in": "header",
+            "required": false,
+            "description": "Slug du cabinet courant. Obligatoire, sauf pour SSE qui accepte aussi le paramètre clinic.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+              "maxLength": 63
+            }
+          },
+          {
+            "name": "clinic",
+            "in": "query",
+            "required": false,
+            "description": "Alternative à X-Clinic pour EventSource. Les deux valeurs doivent correspondre si elles sont fournies.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
       }
     },
     "/notifications/events": {
@@ -1011,11 +1466,39 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Cabinet manquant ou invalide."
+          },
+          "404": {
+            "description": "Cabinet inconnu, accès non autorisé ou ressource absente du cabinet."
           }
         },
         "security": [
           {
             "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Clinic",
+            "in": "header",
+            "required": false,
+            "description": "Slug du cabinet courant. Obligatoire, sauf pour SSE qui accepte aussi le paramètre clinic.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+              "maxLength": 63
+            }
+          },
+          {
+            "name": "clinic",
+            "in": "query",
+            "required": false,
+            "description": "Alternative à X-Clinic pour EventSource. Les deux valeurs doivent correspondre si elles sont fournies.",
+            "schema": {
+              "type": "string"
+            }
           }
         ]
       }
@@ -1034,6 +1517,17 @@
               "default": false
             },
             "description": "false : Content-Disposition inline (affichage dans un onglet). true : attachment (enregistrement)."
+          },
+          {
+            "name": "X-Clinic",
+            "in": "header",
+            "required": true,
+            "description": "Slug du cabinet courant. Obligatoire, sauf pour SSE qui accepte aussi le paramètre clinic.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+              "maxLength": 63
+            }
           }
         ],
         "responses": {
@@ -1110,6 +1604,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Cabinet manquant ou invalide."
           }
         },
         "security": [
@@ -1129,6 +1626,147 @@
           }
         }
       ]
+    },
+    "/clinics": {
+      "get": {
+        "summary": "Cabinets publics ou appartenances de l’utilisateur connecté",
+        "responses": {
+          "200": {
+            "description": "Cabinets accessibles",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "slug",
+                      "name",
+                      "city",
+                      "color"
+                    ],
+                    "properties": {
+                      "id": {
+                        "type": "integer"
+                      },
+                      "slug": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "city": {
+                        "type": "string"
+                      },
+                      "color": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/clinic/agenda": {
+      "get": {
+        "summary": "Agenda du cabinet, réservé aux secrétaires et administrateurs membres",
+        "parameters": [
+          {
+            "name": "X-Clinic",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Réponse réussie",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Appointment"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Connexion requise"
+          },
+          "403": {
+            "description": "Rôle non autorisé"
+          },
+          "404": {
+            "description": "Cabinet non accessible"
+          },
+          "400": {
+            "description": "Cabinet manquant ou invalide"
+          }
+        }
+      }
+    },
+    "/clinic/stats": {
+      "get": {
+        "summary": "Compteurs limités au cabinet courant",
+        "parameters": [
+          {
+            "name": "X-Clinic",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Statistiques du cabinet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "patients",
+                    "appointments",
+                    "professionals"
+                  ],
+                  "properties": {
+                    "patients": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "appointments": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "professionals": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Connexion requise"
+          },
+          "404": {
+            "description": "Cabinet non accessible"
+          },
+          "400": {
+            "description": "Cabinet manquant ou invalide"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1236,7 +1874,8 @@
           "professionalId",
           "professionalName",
           "status",
-          "startsAt"
+          "startsAt",
+          "endsAt"
         ],
         "properties": {
           "id": {
@@ -1268,6 +1907,10 @@
             ]
           },
           "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endsAt": {
             "type": "string",
             "format": "date-time"
           }

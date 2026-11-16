@@ -6,10 +6,8 @@ import fr.medislot.repository.UserRepository;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -19,26 +17,31 @@ import org.springframework.web.server.ResponseStatusException;
 public class AuthController {
     private final UserRepository users;
     private final PasswordEncoder encoder;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbc;
     private final boolean googleEnabled;
 
     public AuthController(
             UserRepository users,
             PasswordEncoder encoder,
-            ObjectProvider<ClientRegistrationRepository> google) {
+            org.springframework.jdbc.core.JdbcTemplate jdbc,
+            org.springframework.beans.factory.ObjectProvider<
+                            org.springframework.security.oauth2.client.registration
+                                    .ClientRegistrationRepository>
+                    google) {
         this.users = users;
         this.encoder = encoder;
+        this.jdbc = jdbc;
         this.googleEnabled = google.getIfAvailable() != null;
     }
 
-    public record Identity(Long id, String name, String email, String role) {}
-
-    // Le front n'affiche le bouton Google que si le back est configuré pour.
     public record Providers(boolean google) {}
 
     @GetMapping("/auth/providers")
     public Providers providers() {
         return new Providers(googleEnabled);
     }
+
+    public record Identity(Long id, String name, String email, String role) {}
 
     // Messages affichés sous les champs du formulaire (RGAA 11.10).
     public record Registration(
@@ -64,6 +67,7 @@ public class AuthController {
         return new Identity(u.id, u.name, u.email, u.role);
     }
 
+    @org.springframework.transaction.annotation.Transactional
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
     public Identity register(@Valid @RequestBody Registration input) {
@@ -81,6 +85,10 @@ public class AuthController {
         u.password = encoder.encode(input.password());
         u.role = "PATIENT";
         users.saveAndFlush(u);
+        jdbc.update(
+                "insert into membership(user_id, clinic_id) values (?, ?)",
+                u.id,
+                fr.medislot.tenant.TenantContext.required());
         return new Identity(u.id, u.name, u.email, u.role);
     }
 }

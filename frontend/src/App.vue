@@ -1,5 +1,12 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, nextTick } from 'vue';
+import { ref, computed, onMounted, watch, nextTick, onBeforeUnmount } from 'vue';
+import { storeToRefs } from 'pinia';
+import { useClinic } from './stores/clinic';
+import { useAgenda } from './stores/agenda';
+import { clinicFromPath, clinicPath } from './tenant';
+import { ClinicChangedError, clinicSnapshot } from './clinicRequest';
+import ClinicSwitcher from './components/ClinicSwitcher.vue';
+import ClinicAgenda from './components/ClinicAgenda.vue';
 import AppHeader from './components/AppHeader.vue';
 import SearchHero from './components/SearchHero.vue';
 import SearchResults from './components/SearchResults.vue';
@@ -11,8 +18,8 @@ import ProfessionalProfile from './components/ProfessionalProfile.vue';
 import AppointmentHistory from './components/AppointmentHistory.vue';
 import CancelConfirm from './components/CancelConfirm.vue';
 import { api, ApiError } from './api';
-import { useSession } from './stores/session';
 import { takeGoogleError } from './googleAuth';
+import { useSession } from './stores/session';
 import { useLive } from './composables/useLive';
 import { useAb } from './composables/useAb';
 import { usePendingBookings } from './composables/usePendingBookings';
@@ -26,7 +33,9 @@ import {
   type Appointment,
   type Notice,
 } from './types';
-const session = useSession(),
+const clinic = useClinic(),
+  agenda = useAgenda(),
+  session = useSession(),
   live = useLive(),
   personalLive = useLive(),
   ab = useAb(),
@@ -63,9 +72,10 @@ const {
   clearNear,
   resetSearch,
   goToPage,
+  clear: clearSearch,
 } = useSearch({ online, error, describe: (e) => message(e) });
-const appointments = ref<Appointment[]>([]),
-  notices = ref<Notice[]>([]),
+const { appointments } = storeToRefs(agenda);
+const notices = ref<Notice[]>([]),
   showNotices = ref(false),
   profile = ref<Professional | null>(null);
 const authOpen = ref(false),
@@ -127,11 +137,13 @@ const unreachable = (e: unknown) =>
 function sessionExpired(text = 'Votre session a expiré. Reconnectez-vous pour continuer.') {
   if (!session.user) return;
   session.user = null;
+  clinic.afterLogout();
   register.value = false;
   authError.value = text;
   authOpen.value = true;
 }
 function message(e: unknown) {
+  if (e instanceof ClinicChangedError) return '';
   if (unreachable(e)) online.value = false;
   if (e instanceof ApiError && e.status === 401 && session.user) {
     sessionExpired();
@@ -147,7 +159,7 @@ function message(e: unknown) {
 }
 async function refreshAppointments() {
   if (!session.user) return;
-  appointments.value = await api<Appointment[]>('/appointments');
+  await agenda.load(session.user.role === 'SECRETARY' || session.user.role === 'ADMIN');
 }
 async function refreshNotices() {
   if (session.user) notices.value = await api<Notice[]>('/notifications');
@@ -349,6 +361,59 @@ watch(
     }
   },
 );
+function connectStreams() {
+  live.connect('/api/events', () => loadSlots().catch(() => {}));
+  personalLive.close();
+  if (session.user)
+    personalLive.connect(
+      '/api/notifications/events',
+      () => {
+        refreshNotices().catch(() => {});
+        refreshAppointments().catch(() => {});
+      },
+      'notifications-changed',
+    );
+}
+watch(
+  () => [clinic.slug, clinic.revision],
+  () => {
+    clearSearch();
+    agenda.clear();
+    notices.value = [];
+    history.value = null;
+    profile.value = null;
+    chosen.value = null;
+    moveId.value = null;
+    cancelId.value = null;
+    showNotices.value = false;
+    success.value = '';
+    error.value = '';
+    live.close();
+    personalLive.close();
+    const snapshot = clinicSnapshot();
+    nextTick().then(() => {
+      if (!initialized || snapshot?.slug !== clinic.slug || snapshot?.revision !== clinic.revision)
+        return;
+      search(true).catch(() => {});
+      refreshAppointments().catch((e) => (error.value = message(e)));
+      refreshNotices().catch(() => {});
+      connectStreams();
+    });
+  },
+  { flush: 'sync' },
+);
+function navigateClinic() {
+  const next = clinicFromPath(window.location.pathname);
+  try {
+    if (!next) throw new Error('Cabinet invalide.');
+    clinic.switchTo(next, false);
+  } catch (e) {
+    window.history.replaceState(null, '', clinicPath(clinic.slug));
+    error.value = message(e);
+  }
+}
+window.addEventListener('popstate', navigateClinic);
+onBeforeUnmount(() => window.removeEventListener('popstate', navigateClinic));
 // la version reste celle reçue au chargement : pas de nouvelle affectation au retour du réseau
 window.addEventListener('offline', () => {
   online.value = false;
@@ -369,24 +434,29 @@ window.addEventListener('online', () => {
   search().catch(() => {});
   refreshAppointments().catch(() => {});
 });
+let initialized = false;
 onMounted(async () => {
-  ab.load();
-  // retour de Google après un échec : message dans la fenêtre de connexion
   const googleError = takeGoogleError(window.location.href);
-  if (googleError) {
-    // window.history : « history » désigne ici l'historique d'un rendez-vous
-    window.history.replaceState(window.history.state, '', googleError.cleanUrl);
-    openAuth();
-    authError.value = googleError.message;
+  if (googleError) window.history.replaceState(window.history.state, '', googleError.cleanUrl);
+  try {
+    await clinic.load();
+  } catch (e) {
+    error.value = message(e);
   }
-  session.loadProviders();
-  await search();
   try {
     await session.load();
   } catch (e) {
     error.value = message(e);
   }
-  live.connect('/api/events', () => loadSlots().catch(() => {}));
+  await session.loadProviders();
+  if (googleError) {
+    openAuth();
+    authError.value = googleError.message;
+  }
+  initialized = true;
+  ab.load();
+  await search();
+  connectStreams();
 });
 </script>
 <template>
@@ -403,6 +473,7 @@ onMounted(async () => {
     @login="openAuth"
     @logout="logout"
   />
+  <ClinicSwitcher :disabled="busy" @error="error = $event" />
   <main id="main">
     <SearchHero
       v-if="view === 'search'"
@@ -462,8 +533,14 @@ onMounted(async () => {
         @abandon-move="abandonMove"
         @go-to-page="goToPage"
       />
+      <ClinicAgenda
+        v-else-if="session.user?.role === 'SECRETARY' || session.user?.role === 'ADMIN'"
+        :appointments="appointments"
+        :loading="agenda.loading"
+      />
       <AppointmentList
         v-else
+        :key="`${clinic.slug}:${clinic.revision}`"
         :appointments="appointments"
         @book="view = 'search'"
         @move="move"

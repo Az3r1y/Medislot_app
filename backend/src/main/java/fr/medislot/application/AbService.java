@@ -10,6 +10,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.*;
 
 @Service
+@org.springframework.transaction.annotation.Transactional
 public class AbService {
     public static final String EXP = "booking-confirm-2026";
 

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { GOOGLE_ERROR_MESSAGES, takeGoogleError } from './googleAuth';
+import { GOOGLE_ERROR_MESSAGES, takeGoogleError, googleLoginUrl } from './googleAuth';
 
 describe('takeGoogleError', () => {
   test('sans paramètre : rien à afficher', () => {
@@ -23,4 +23,16 @@ describe('takeGoogleError', () => {
     const r = takeGoogleError('http://localhost:8088/?google_error=%3Cscript%3E');
     expect(r?.message).toBe(GOOGLE_ERROR_MESSAGES.failed);
   });
+});
+
+test('le départ Google porte le cabinet courant', () => {
+  expect(googleLoginUrl('cabinet-b')).toBe('/api/oauth2/authorization/google?clinic=cabinet-b');
+  expect(() => googleLoginUrl('../autre')).toThrow('Cabinet invalide');
+});
+
+test('les noms hérités ne sont pas des codes d’erreur valides', () => {
+  for (const code of ['constructor', 'toString', '__proto__'])
+    expect(takeGoogleError(`http://localhost/?google_error=${code}`)?.message).toBe(
+      GOOGLE_ERROR_MESSAGES.failed,
+    );
 });
