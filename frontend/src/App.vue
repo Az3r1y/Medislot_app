@@ -532,6 +532,7 @@ onMounted(async () => {
       />
       <AppointmentList
         v-else
+        :key="`${clinic.slug}:${clinic.revision}`"
         :appointments="appointments"
         @book="view = 'search'"
         @move="move"

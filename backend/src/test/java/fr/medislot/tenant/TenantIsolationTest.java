@@ -137,9 +137,9 @@ class TenantIsolationTest extends PostgresTestBase {
                             () ->
                                     c.createStatement()
                                             .executeUpdate(
-                                                    "insert into appointment(clinic_id,patient_id,slot_id,status,created_at) values(1,(select id from app_user where email='patient@medislot.test'),"
+                                                    "insert into appointment(clinic_id,patient_id,slot_id,status,created_at,calendar_updated_at) values(1,(select id from app_user where email='patient@medislot.test'),"
                                                             + foreignSlot
-                                                            + ",'CANCELLED',now())"))
+                                                            + ",'CANCELLED',now(),now())"))
                     .isInstanceOf(SQLException.class)
                     .satisfies(
                             e -> assertThat(((SQLException) e).getSQLState()).isEqualTo("23503"));

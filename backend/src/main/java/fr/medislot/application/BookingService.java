@@ -96,6 +96,7 @@ public class BookingService {
         a.slotId = s.id;
         a.status = "CONFIRMED";
         a.createdAt = Instant.now();
+        a.calendarUpdatedAt = a.createdAt;
         ab.ifPresent(
                 x -> {
                     a.abExperiment = x.experiment();
@@ -119,6 +120,8 @@ public class BookingService {
         Slot s = lock(a.slotId);
         if (a.status.equals("CANCELLED")) return a;
         a.status = "CANCELLED";
+        a.calendarSequence++;
+        a.calendarUpdatedAt = Instant.now();
         appointments.saveAndFlush(a);
         record(a, "CANCELLED", "Votre rendez-vous a été annulé.");
         events.publishEvent(
@@ -140,6 +143,8 @@ public class BookingService {
         Slot old = first.id.equals(oldId) ? first : second;
         check(target);
         a.slotId = target.id;
+        a.calendarSequence++;
+        a.calendarUpdatedAt = Instant.now();
         appointments.saveAndFlush(a);
         record(a, "RESCHEDULED", "Votre rendez-vous a été déplacé.");
         events.publishEvent(
