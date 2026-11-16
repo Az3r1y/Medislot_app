@@ -35,8 +35,11 @@ class NearbyPostgresTest {
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry r) {
         r.add("spring.datasource.url", db::getJdbcUrl);
-        r.add("spring.datasource.username", db::getUsername);
-        r.add("spring.datasource.password", db::getPassword);
+        r.add("spring.flyway.url", db::getJdbcUrl);
+        r.add("spring.flyway.user", db::getUsername);
+        r.add("spring.flyway.password", db::getPassword);
+        r.add("spring.datasource.username", () -> "medislot_app");
+        r.add("spring.datasource.password", () -> "medislot-app-local-only");
     }
 
     @LocalServerPort int port;
@@ -62,6 +65,7 @@ class NearbyPostgresTest {
                                                                 + port
                                                                 + "/api/professionals?"
                                                                 + query))
+                                        .header("X-Clinic", "cabinet-b")
                                         .build(),
                                 HttpResponse.BodyHandlers.ofString());
         return new Reply(r.statusCode(), new ObjectMapper().readTree(r.body()));
@@ -108,7 +112,7 @@ class NearbyPostgresTest {
     @Test
     void searchWithoutPositionIsUnchanged() throws Exception {
         var r = get("size=50");
-        assertThat(r.body().get("total").asInt()).isEqualTo(11);
+        assertThat(r.body().get("total").asInt()).isEqualTo(7);
         assertThat(r.body().get("items").get(0).get("distanceKm").isNull()).isTrue();
     }
 

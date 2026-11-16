@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 
+@org.springframework.transaction.annotation.Transactional(readOnly = true)
 public interface ProfessionalRepository extends JpaRepository<Professional, Long> {
     @Query(
             """

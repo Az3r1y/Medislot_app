@@ -18,6 +18,7 @@ import java.time.Instant;
 
 @RestController
 @RequestMapping("/api")
+@org.springframework.transaction.annotation.Transactional
 public class AppointmentController {
     private final BookingService service;
     private final AbService ab;
@@ -61,7 +62,7 @@ public class AppointmentController {
 
     public record NotificationDto(Long id, String message, Instant createdAt) {}
 
-    private AppointmentDto dto(Appointment a) {
+    public AppointmentDto dto(Appointment a) {
         Slot s = slots.findById(a.slotId).orElseThrow();
         Professional p = professionals.findById(s.professionalId).orElseThrow();
         return new AppointmentDto(
