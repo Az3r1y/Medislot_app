@@ -29,7 +29,7 @@
     "@playwright/test": "^1.55.0",
     "@types/leaflet": "^1.9.22",
     "@types/node": "^24.0.0",
-    "@vitejs/plugin-vue": "^6.0.0",
+    "@vitejs/plugin-vue": "^6.0.11",
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",
     "prettier": "^3.10.1",
