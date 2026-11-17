@@ -14,7 +14,6 @@ test('inscription, limite UTF-8 du mot de passe et connexion', async ({ request 
     data: { email, name: 'Patient de test', password: 'MediSlot-test-2026!' },
   });
   expect(created.status()).toBe(201);
-  expect((await created.json()).role).toBe('PATIENT');
   const login = await request.post('/api/login', {
     headers,
     form: { username: email, password: 'MediSlot-test-2026!' },
@@ -22,5 +21,5 @@ test('inscription, limite UTF-8 du mot de passe et connexion', async ({ request 
   expect(login.status()).toBe(204);
   const me = await request.get('/api/me');
   expect(me.status()).toBe(200);
-  expect((await me.json()).email).toBe(email);
+  expect(await me.json()).toMatchObject({ email, role: 'PATIENT' });
 });

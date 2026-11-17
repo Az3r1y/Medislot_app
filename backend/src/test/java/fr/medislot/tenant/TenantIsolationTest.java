@@ -146,6 +146,30 @@ class TenantIsolationTest extends PostgresTestBase {
     }
 
     @Test
+    void registerDoesNotRevealExistingAccount() throws Exception {
+        var fresh =
+                call(
+                        client(),
+                        "POST",
+                        "/register",
+                        "cabinet-a",
+                        "{\"email\":\"new-"
+                                + java.util.UUID.randomUUID()
+                                + "@medislot.test\",\"name\":\"Test\",\"password\":\"Autre-mot-de-passe-1\"}");
+        var existing =
+                call(
+                        client(),
+                        "POST",
+                        "/register",
+                        "cabinet-a",
+                        "{\"email\":\"patient@medislot.test\",\"name\":\"Test\",\"password\":\"Autre-mot-de-passe-1\"}");
+        assertThat(existing.statusCode()).isEqualTo(fresh.statusCode()).isEqualTo(201);
+        assertThat(existing.body()).isEqualTo(fresh.body());
+        // le compte existant garde son mot de passe
+        login("patient@medislot.test");
+    }
+
+    @Test
     void compositeForeignKeyPreventsMixingClinicAndSlot() throws Exception {
         Long slot;
         try (var c = connection()) {
