@@ -120,6 +120,32 @@ class TenantIsolationTest extends PostgresTestBase {
     }
 
     @Test
+    void honeypotFieldBlocksRegisterAndLogin() throws Exception {
+        var c = client();
+        assertThat(
+                        call(
+                                        c,
+                                        "POST",
+                                        "/register",
+                                        "cabinet-a",
+                                        "{\"email\":\"bot-"
+                                                + java.util.UUID.randomUUID()
+                                                + "@medislot.test\",\"name\":\"Bot\",\"password\":\"MediSlot-demo-2026!\",\"website\":\"http://spam\"}")
+                                .statusCode())
+                .isEqualTo(400);
+        assertThat(
+                        call(
+                                        c,
+                                        "POST",
+                                        "/login",
+                                        null,
+                                        "username=patient%40medislot.test&password=MediSlot-demo-2026%21&website=spam")
+                                .statusCode())
+                .isEqualTo(401);
+        login("patient@medislot.test");
+    }
+
+    @Test
     void compositeForeignKeyPreventsMixingClinicAndSlot() throws Exception {
         Long slot;
         try (var c = connection()) {

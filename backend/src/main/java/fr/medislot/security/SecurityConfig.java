@@ -128,9 +128,16 @@ public class SecurityConfig {
         http.addFilterBefore(
                 (req, res, chain) -> {
                     var r = (jakarta.servlet.http.HttpServletRequest) req;
-                    if ("POST".equals(r.getMethod())
-                            && "/api/login".equals(r.getServletPath())
-                            && attempts.locked(r.getParameter("username"))) {
+                    boolean login =
+                            "POST".equals(r.getMethod())
+                                    && "/api/login".equals(r.getServletPath());
+                    // Champ piège rempli : robot, même réponse qu'un mauvais mot de passe.
+                    String website = login ? r.getParameter("website") : null;
+                    if (website != null && !website.isEmpty()) {
+                        problem((HttpServletResponse) res, 401, "Identifiants incorrects");
+                        return;
+                    }
+                    if (login && attempts.locked(r.getParameter("username"))) {
                         problem(
                                 (HttpServletResponse) res,
                                 429,
