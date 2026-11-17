@@ -24,11 +24,11 @@ export const useSession = defineStore('session', () => {
       providers.value = { google: false };
     }
   }
-  async function login(email: string, password: string) {
+  async function login(email: string, password: string, website = '') {
     await refreshCsrf();
     await api('/login', {
       method: 'POST',
-      body: new URLSearchParams({ username: email, password }),
+      body: new URLSearchParams({ username: email, password, website }),
     });
     await refreshCsrf();
     await load();
