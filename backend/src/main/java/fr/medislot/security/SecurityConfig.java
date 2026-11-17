@@ -32,6 +32,11 @@ public class SecurityConfig {
         return email ->
                 users.findByEmail(email.toLowerCase(java.util.Locale.ROOT))
                         .filter(u -> u.password != null)
+                        // Le master a sa propre porte d'entrée : /api/platform/login.
+                        .filter(
+                                u ->
+                                        !fr.medislot.platform.PlatformAuthController.ROLE.equals(
+                                                u.role))
                         .map(
                                 u ->
                                         User.withUsername(u.email)
@@ -144,6 +149,12 @@ public class SecurityConfig {
                                         .permitAll()
                                         // Avant le permitAll de /api/ab/** : la première règle qui
                                         // correspond s'applique.
+                                        // Console master : porte d'entrée publique, le reste
+                                        // réservé au rôle PLATFORM_ADMIN.
+                                        .requestMatchers("/api/platform/login")
+                                        .permitAll()
+                                        .requestMatchers("/api/platform/**")
+                                        .hasRole(fr.medislot.platform.PlatformAuthController.ROLE)
                                         .requestMatchers("/api/clinic/agenda")
                                         .hasAnyRole("SECRETARY", "ADMIN")
                                         .requestMatchers("/api/ab/metrics")
@@ -196,7 +207,18 @@ public class SecurityConfig {
                                                         problem(
                                                                 res,
                                                                 403,
-                                                                "Action refusée ou jeton CSRF expiré")));
+                                                                req.getServletPath()
+                                                                                        .startsWith(
+                                                                                                "/api/platform/")
+                                                                                && !(ex
+                                                                                        instanceof
+                                                                                        org.springframework
+                                                                                                .security
+                                                                                                .web
+                                                                                                .csrf
+                                                                                                .CsrfException)
+                                                                        ? "Cette zone est réservée à l'équipe plateforme."
+                                                                        : "Action refusée ou jeton CSRF expiré")));
         return http.build();
     }
 }

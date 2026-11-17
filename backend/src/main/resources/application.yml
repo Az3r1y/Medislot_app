@@ -39,6 +39,9 @@ medislot:
   # comptes de démonstration : seulement en local
   demo-seed: ${DEMO_SEED:false}
   ab-enabled: ${AB_ENABLED:true}
+  # Console master : clé secrète des pseudonymes patients (stables tant qu'elle ne change pas).
+  platform:
+    pseudonym-key: ${PSEUDONYM_KEY:}
   # Connexion avec Google : désactivée tant que GOOGLE_CLIENT_ID est vide.
   google:
     client-id: ${GOOGLE_CLIENT_ID:}

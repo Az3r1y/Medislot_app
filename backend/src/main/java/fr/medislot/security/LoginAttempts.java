@@ -24,13 +24,24 @@ public class LoginAttempts {
 
     private final ConcurrentHashMap<String, State> states = new ConcurrentHashMap<>();
     private final Clock clock;
+    private final int maxFailures;
 
     public LoginAttempts() {
         this(Clock.systemUTC());
     }
 
+    /** Seuil différent, par exemple par adresse IP où plusieurs personnes peuvent se partager l'adresse. */
+    public LoginAttempts(int maxFailures) {
+        this(Clock.systemUTC(), maxFailures);
+    }
+
     LoginAttempts(Clock clock) {
+        this(clock, MAX_FAILURES);
+    }
+
+    LoginAttempts(Clock clock, int maxFailures) {
         this.clock = clock;
+        this.maxFailures = maxFailures;
     }
 
     private static String key(String email) {
@@ -51,7 +62,7 @@ public class LoginAttempts {
                 (k, s) -> {
                     if (s == null || expired(s, now)) s = new State(0, now, null);
                     int n = s.failures() + 1;
-                    return new State(n, s.first(), n >= MAX_FAILURES ? now.plus(LOCK) : null);
+                    return new State(n, s.first(), n >= maxFailures ? now.plus(LOCK) : null);
                 });
     }
 

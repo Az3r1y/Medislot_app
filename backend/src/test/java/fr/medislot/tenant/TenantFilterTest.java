@@ -53,6 +53,30 @@ class TenantFilterTest {
     }
 
     @Test
+    void platformAccountIsRefusedOnTheCabinetApi() throws Exception {
+        request.addHeader("X-Clinic", "cabinet-a");
+        SecurityContextHolder.getContext()
+                .setAuthentication(
+                        UsernamePasswordAuthenticationToken.authenticated(
+                                "master@medislot.test",
+                                null,
+                                java.util.List.of(
+                                        new org.springframework.security.core.authority
+                                                .SimpleGrantedAuthority("ROLE_PLATFORM_ADMIN"))));
+        filter.doFilter(request, response, (a, b) -> fail("Ne doit pas continuer"));
+        assertThat(response.getStatus()).isEqualTo(403);
+    }
+
+    @Test
+    void platformRoutesHaveNoClinic() throws Exception {
+        var platform = new MockHttpServletRequest("GET", "/api/platform/clinics");
+        platform.setServletPath("/api/platform/clinics");
+        var passed = new boolean[] {false};
+        filter.doFilter(platform, new MockHttpServletResponse(), (a, b) -> passed[0] = true);
+        assertThat(passed[0]).isTrue();
+    }
+
+    @Test
     void unknownClinicIs404() throws Exception {
         request.addHeader("X-Clinic", "inconnu");
         filter.doFilter(request, response, (a, b) -> fail("Ne doit pas continuer"));

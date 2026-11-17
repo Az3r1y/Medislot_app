@@ -20,6 +20,28 @@ Le projet utilise des praticiens et des comptes fictifs pour la démonstration.
 - Expérience A/B sur la confirmation de réservation.
 - Traces distribuées avec OpenTelemetry et Jaeger.
 
+## Console master
+
+La console du super-administrateur (rôle `PLATFORM_ADMIN`) gère tous les cabinets depuis une porte d’entrée séparée : [localhost:8088/platform/](http://localhost:8088/platform/) avec Docker, [127.0.0.1:5173/platform/](http://127.0.0.1:5173/platform/) avec Vite. Compte de démonstration : `master@medislot.test`, mot de passe `MediSlot-demo-2026!`.
+
+| Écran | API |
+|---|---|
+| Connexion (5 échecs : blocage 15 min, même message que le compte existe ou non) | `POST /api/platform/login` |
+| Liste, création, modification et suppression des cabinets | `GET`, `POST /api/platform/clinics`, `PUT`, `DELETE /api/platform/clinics/{slug}`, `PUT /api/platform/clinics/{slug}/logo` |
+| Dashboard global (période et cabinet dans l’URL, jours en heure de Paris) | `GET /api/platform/stats?from=…&to=…&clinic=…` |
+| Fiche d’un cabinet et ses praticiens | `GET /api/platform/clinics/{slug}` |
+| Journal d’un cabinet, export CSV, journal master | `GET /api/platform/clinics/{slug}/audit`, `…/audit.csv`, `GET /api/platform/audit` |
+| Rendez-vous d’un praticien, patients pseudonymisés | `GET /api/platform/clinics/{slug}/practitioners/{id}/appointments` |
+
+Règles :
+
+- Les comptes `PLATFORM_ADMIN` ne peuvent pas se connecter par `/api/login`, et reçoivent un 403 sur l’API des cabinets. Un compte de cabinet reçoit un 403 sur `/api/platform/**`.
+- Session régénérée à la connexion, expirée après 15 minutes d’inactivité.
+- Aucun superutilisateur PostgreSQL : les lectures agrégées activent la politique RLS `platform_read` (`app.platform`) dans la transaction ; les écritures se font avec le cabinet visé comme cabinet courant.
+- Le master ne voit que des comptes. Les patients apparaissent sous un pseudonyme HMAC stable par cabinet (`PSEUDONYM_KEY`), jamais avec leur nom ni un motif.
+- La suppression d’un cabinet exige son identifiant et le mot de passe master. Chaque action du master est inscrite dans `platform_audit`, en ajout seul.
+- Les statuts « honoré » et « absent » demandent un suivi de présence que l’application n’a pas encore : la console affiche « Confirmé », « Passé » et « Annulé ».
+
 ## Technologies
 
 | Partie | Technologies |
@@ -128,6 +150,7 @@ La chaîne de traces complète, avec l’agent Java, le collecteur et Jaeger, es
 | `AB_ENABLED` | Activation de l’expérience A/B | `true` |
 | `GOOGLE_CLIENT_ID` | Identifiant du client OAuth Google ; vide : connexion Google désactivée | vide |
 | `GOOGLE_CLIENT_SECRET` | Secret du client OAuth Google, obligatoire avec `GOOGLE_CLIENT_ID` | vide |
+| `PSEUDONYM_KEY` | Clé secrète des pseudonymes patients de la console master ; vide : clé aléatoire à chaque démarrage | vide |
 | `GOOGLE_REDIRECT_URI` | URI de retour déclarée chez Google | adresse vue par le backend |
 
 Pour la démonstration locale, `compose.yaml` active les données fictives, autorise les cookies en HTTP et utilise deux comptes PostgreSQL : `medislot` pour les migrations (`medislot-local-only` par défaut) et `medislot_app` pour les requêtes (`medislot-app-local-only`). Ces identifiants sont réservés à la démonstration ; les changements de mots de passe doivent être appliqués aussi aux rôles PostgreSQL.
