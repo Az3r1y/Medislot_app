@@ -291,7 +291,7 @@ const invalid = (field: string) => (errors.value[field] ? 'true' : undefined);
                   v-model="form.address"
                   class="pf-input"
                   maxlength="200"
-                  autocomplete="street-address"
+                  autocomplete="address-line1"
                 />
               </label>
             </div>

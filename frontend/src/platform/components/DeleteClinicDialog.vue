@@ -70,7 +70,7 @@ async function submit() {
 }
 </script>
 <template>
-  <div class="pf-overlay" @click.self="close">
+  <div class="pf-overlay" @click.self="close" @keydown="trap">
     <form
       ref="dialog"
       class="pf-dialog"
@@ -79,7 +79,6 @@ async function submit() {
       aria-labelledby="delete-title"
       aria-describedby="delete-consequences"
       novalidate
-      @keydown="trap"
       @submit.prevent="submit"
     >
       <div class="pf-dialog-body">

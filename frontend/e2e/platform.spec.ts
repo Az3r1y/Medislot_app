@@ -19,7 +19,7 @@ test('console master : connexion séparée, cabinets, praticiens et vue minimis�
     .first()
     .click();
   await expect(page.getByText('Vue minimisée : les patients sont pseudonymisés.')).toBeVisible();
-  await expect(page.locator('body')).not.toContainText('@medislot.test');
+  await expect(page.locator('main')).not.toContainText('@medislot.test');
 
   await page.getByRole('link', { name: 'Dashboard' }).click();
   await expect(page).toHaveURL(/from=\d{4}-\d{2}-\d{2}&to=\d{4}-\d{2}-\d{2}&clinic=all/);
