@@ -25,6 +25,8 @@ services:
       DEMO_SEED: "true"
       COOKIE_SECURE: "false"
       AB_ENABLED: "true"
+      # Console master : clé des pseudonymes patients, à remplacer hors démonstration.
+      PSEUDONYM_KEY: ${PSEUDONYM_KEY:-medislot-pseudonymes-local-only}
       # Connexion avec Google : identifiants dans un fichier .env (non versionné), jamais ici.
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
