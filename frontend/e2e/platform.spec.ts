@@ -10,8 +10,8 @@ test('console master : connexion séparée, cabinets, praticiens et vue minimis�
   await page.getByRole('button', { name: 'Continuer', exact: true }).click();
 
   await expect(page.getByRole('heading', { name: /^Cabinets/ })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Cabinet des Tilleuls' })).toBeVisible();
-  await page.getByRole('link', { name: 'Cabinet des Tilleuls' }).click();
+  await expect(page.getByRole('link', { name: 'Cabinet des Tilleuls', exact: true })).toBeVisible();
+  await page.getByRole('link', { name: 'Cabinet des Tilleuls', exact: true }).click();
   await expect(page).toHaveURL(/\/platform\/clinics\/cabinet-a$/);
 
   await page
