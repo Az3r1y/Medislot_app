@@ -33,6 +33,7 @@ function logoClick() {
   try {
     const player = new Audio('/audio/harlem-shake.mp3');
     player.loop = true;
+    player.volume = 1;
     audio = player;
     const context = new AudioContext();
     audioContext = context;
@@ -40,12 +41,12 @@ function logoClick() {
     const bass = context.createBiquadFilter();
     bass.type = 'lowshelf';
     bass.frequency.value = 150;
-    bass.gain.value = 8;
+    bass.gain.value = 12;
     const analyser = context.createAnalyser();
     analyser.fftSize = 256;
     const limiter = context.createDynamicsCompressor();
-    limiter.threshold.value = -8;
-    limiter.ratio.value = 12;
+    limiter.threshold.value = -1;
+    limiter.ratio.value = 20;
     source.connect(bass).connect(analyser).connect(limiter).connect(context.destination);
     const frequencies = new Uint8Array(analyser.frequencyBinCount);
     let phase = '';
