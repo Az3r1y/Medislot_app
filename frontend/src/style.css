@@ -133,6 +133,76 @@ button {
   background: #0873b9;
   color: white;
 }
+
+body.harlem-intro .brand {
+  animation: harlem-warmup 0.86s ease-in-out infinite alternate;
+}
+body.harlem-intro :is(main h1, main article, main .hero-copy) {
+  animation: harlem-warmup 1.72s ease-in-out infinite alternate;
+}
+body.harlem-drop :where(*:not(.sr-only)) {
+  animation: harlem-dance 0.43s ease-in-out infinite alternate !important;
+}
+body.harlem-drop :where(*:nth-child(even):not(.sr-only)) {
+  animation-direction: alternate-reverse !important;
+}
+body.harlem-drop :where(*:nth-child(3n):not(.sr-only)) {
+  animation-duration: 0.645s !important;
+}
+body.harlem-drop :where(*:nth-child(5n):not(.sr-only)) {
+  animation-delay: -0.215s !important;
+}
+body.harlem-drop::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  background: rgba(255, 0, 89, 0.42);
+  animation: harlem-strobe 1.72s steps(1, end) infinite;
+}
+@keyframes harlem-warmup {
+  from {
+    transform: rotate(calc(-1deg * var(--harlem-build, 0))) translateY(0);
+  }
+  to {
+    transform: rotate(calc(1deg * var(--harlem-build, 0)))
+      translateY(calc(-4px * var(--harlem-build, 0)));
+  }
+}
+@keyframes harlem-dance {
+  from {
+    transform: translateY(calc(-3px - 7px * var(--harlem-beat, 0))) rotate(-2deg);
+  }
+  to {
+    transform: translateY(calc(3px + 7px * var(--harlem-beat, 0))) rotate(2deg);
+  }
+}
+@keyframes harlem-strobe {
+  0% {
+    background: rgba(255, 0, 89, 0.42);
+  }
+  25% {
+    background: rgba(0, 220, 255, 0.42);
+  }
+  50% {
+    background: rgba(211, 255, 0, 0.42);
+  }
+  75% {
+    background: rgba(164, 0, 255, 0.42);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.harlem-intro .brand,
+  body.harlem-intro :is(main h1, main article, main .hero-copy),
+  body.harlem-drop :where(*:not(.sr-only)),
+  body.harlem-drop::after {
+    animation: none !important;
+  }
+  body.harlem-drop::after {
+    display: none;
+  }
+}
 .hero-inner {
   max-width: 1280px;
   margin: auto;

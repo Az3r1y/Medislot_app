@@ -72,7 +72,7 @@ public class AuthController {
     @org.springframework.transaction.annotation.Transactional
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
-    public Identity register(@Valid @RequestBody Registration input) {
+    public void register(@Valid @RequestBody Registration input) {
         if (input.website() != null && !input.website().isEmpty())
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Requête refusée.");
         if (input.password().getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 72)
@@ -80,19 +80,19 @@ public class AuthController {
                     HttpStatus.BAD_REQUEST,
                     "Le mot de passe doit contenir au maximum 72 octets UTF-8.");
         String email = input.email().strip().toLowerCase(java.util.Locale.ROOT);
-        if (users.existsByEmail(email))
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT, "Cette adresse est déjà utilisée.");
+        // Adresse déjà inscrite : même réponse et même durée (hachage compris) qu'une création,
+        // pour ne pas révéler qui a un compte. La connexion qui suit échoue normalement.
+        String hash = encoder.encode(input.password());
+        if (users.existsByEmail(email)) return;
         AppUser u = new AppUser();
         u.email = email;
         u.name = input.name().strip();
-        u.password = encoder.encode(input.password());
+        u.password = hash;
         u.role = "PATIENT";
         users.saveAndFlush(u);
         jdbc.update(
                 "insert into membership(user_id, clinic_id) values (?, ?)",
                 u.id,
                 fr.medislot.tenant.TenantContext.required());
-        return new Identity(u.id, u.name, u.email, u.role);
     }
 }
