@@ -54,7 +54,9 @@ public class AuthController {
                     String password,
             @NotBlank(message = "Saisissez votre nom.")
                     @Size(max = 120, message = "120 caractères au plus.")
-                    String name) {}
+                    String name,
+            // Champ piège : invisible pour un humain, rempli par les robots.
+            String website) {}
 
     @GetMapping("/csrf")
     public java.util.Map<String, String> csrf(CsrfToken token) {
@@ -71,6 +73,8 @@ public class AuthController {
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
     public Identity register(@Valid @RequestBody Registration input) {
+        if (input.website() != null && !input.website().isEmpty())
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Requête refusée.");
         if (input.password().getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 72)
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,

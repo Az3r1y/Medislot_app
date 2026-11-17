@@ -983,3 +983,12 @@ footer small {
   padding: 1rem;
   border-bottom: 1px solid #dce5e1;
 }
+
+/* Champ piège anti-robots : hors écran plutôt que display:none, que certains robots détectent. */
+.hp-field {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}

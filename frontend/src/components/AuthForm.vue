@@ -5,6 +5,7 @@ const clinic = useClinic();
 const email = defineModel<string>('email', { required: true });
 const password = defineModel<string>('password', { required: true });
 const name = defineModel<string>('name', { required: true });
+const website = defineModel<string>('website', { required: true });
 defineProps<{
   register: boolean;
   busy: boolean;
@@ -31,6 +32,11 @@ const describedBy = (...ids: (string | false)[]) => ids.filter(Boolean).join(' '
   <!-- novalidate : la règle et son message viennent du 400 du back, affichés sous le champ -->
   <form class="auth-form" novalidate @submit.prevent="emit('submit')">
     <p class="subtle">Tous les champs sont obligatoires.</p>
+    <!-- champ piège : hors écran et hors lecteur d'écran, seuls les robots le remplissent -->
+    <div class="hp-field" aria-hidden="true">
+      <label for="auth-website">Site web</label>
+      <input id="auth-website" v-model="website" tabindex="-1" autocomplete="off" />
+    </div>
     <div v-if="register" class="field">
       <label for="auth-name">Votre nom</label
       ><input

@@ -83,6 +83,7 @@ const authOpen = ref(false),
   email = ref(''),
   password = ref(''),
   name = ref(''),
+  website = ref(''),
   authError = ref('');
 const chosen = ref<{ professional: Professional; slot: Slot } | null>(null),
   moveId = ref<number | null>(null),
@@ -185,9 +186,14 @@ async function authenticate() {
     if (register.value)
       await api('/register', {
         method: 'POST',
-        body: JSON.stringify({ name: name.value, email: email.value, password: password.value }),
+        body: JSON.stringify({
+          name: name.value,
+          email: email.value,
+          password: password.value,
+          website: website.value,
+        }),
       });
-    await session.login(email.value, password.value);
+    await session.login(email.value, password.value, website.value);
     authOpen.value = false;
     password.value = '';
     await refreshAppointments();
@@ -573,6 +579,7 @@ onMounted(async () => {
         v-model:email="email"
         v-model:password="password"
         v-model:name="name"
+        v-model:website="website"
         :register="register"
         :busy="busy"
         :google="session.providers.google"
