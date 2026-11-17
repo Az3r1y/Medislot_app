@@ -18,5 +18,5 @@ demarrerTraces();
 // Console master (/platform) : application distincte, chargée à part.
 const path = globalThis.location?.pathname ?? '/';
 if (path === '/platform' || path.startsWith('/platform/'))
-  import('./platform/PlatformApp.vue').then((m) => createApp(m.default).mount('#app'));
+  void import('./platform/PlatformApp.vue').then((m) => createApp(m.default).mount('#app'));
 else createApp(App).use(createPinia()).mount('#app');

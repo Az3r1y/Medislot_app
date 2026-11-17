@@ -44,7 +44,7 @@ const max = computed(() => Math.max(1, ...shown.value.map((c) => c.appointments3
 function removed(clinic: ClinicRow) {
   removing.value = null;
   notify(`Le cabinet « ${clinic.name} » a été supprimé.`);
-  load();
+  void load();
 }
 </script>
 <template>

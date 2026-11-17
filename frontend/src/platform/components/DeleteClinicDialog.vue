@@ -148,7 +148,7 @@ async function submit() {
       </div>
       <div class="pf-dialog-foot">
         <button type="button" class="pf-button" :disabled="busy" @click="close">Annuler</button>
-        <button class="pf-button pf-danger" :disabled="!matches || !password || busy">
+        <button type="submit" class="pf-button pf-danger" :disabled="!matches || !password || busy">
           <PfIcon name="trash" />{{ busy ? 'Suppression…' : 'Supprimer définitivement' }}
         </button>
       </div>

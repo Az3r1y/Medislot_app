@@ -43,7 +43,7 @@ async function load() {
   }
 }
 onMounted(async () => {
-  load();
+  void load();
   try {
     clinicName.value = (await platformApi<ClinicDetail>(`/clinics/${props.slug}`)).clinic.name;
   } catch {}

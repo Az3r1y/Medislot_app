@@ -55,7 +55,7 @@ async function load() {
   }
 }
 onMounted(async () => {
-  load();
+  void load();
   try {
     name.value = (await platformApi<ClinicDetail>(`/clinics/${props.slug}`)).clinic.name;
   } catch {}
@@ -65,13 +65,13 @@ watch(
   () => {
     pages.value = [null];
     index.value = 0;
-    load();
+    void load();
   },
 );
 function go(step: 1 | -1) {
   if (step === 1 && next.value) pages.value[index.value + 1] = next.value;
   index.value += step;
-  load();
+  void load();
 }
 const first = computed(() => (total.value ? index.value * 25 + 1 : 0));
 const last = computed(() => index.value * 25 + items.value.length);

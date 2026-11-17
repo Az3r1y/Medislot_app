@@ -70,7 +70,7 @@ async function load() {
 onMounted(async () => {
   // Sans période dans l'URL : on l'y inscrit, le changement d'URL déclenche le chargement.
   if (!new URLSearchParams(search.value).get('from')) update({});
-  else load();
+  else void load();
   try {
     clinics.value = await platformApi<ClinicRow[]>('/clinics');
   } catch (e) {

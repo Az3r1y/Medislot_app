@@ -311,13 +311,13 @@ const invalid = (field: string) => (errors.value[field] ? 'true' : undefined);
                   maxlength="254"
                   :readonly="editing"
                   :aria-invalid="invalid('adminEmail')"
-                  aria-describedby="admin-help"
+                  :aria-describedby="errors.adminEmail ? 'admin-error' : 'admin-help'"
                 />
-                <span v-if="errors.adminEmail" id="admin-help" class="pf-field-error">{{
+                <span v-if="errors.adminEmail" id="admin-error" class="pf-field-error">{{
                   errors.adminEmail
                 }}</span>
               </label>
-              <p id="admin-help" v-if="!errors.adminEmail" class="pf-help pf-align-end">
+              <p v-if="!errors.adminEmail" id="admin-help" class="pf-help pf-align-end">
                 {{
                   editing
                     ? 'Le compte administrateur se gère ensuite depuis le cabinet.'
@@ -334,7 +334,7 @@ const invalid = (field: string) => (errors.value[field] ? 'true' : undefined);
                 class="pf-button"
                 >Annuler</PfLink
               >
-              <button class="pf-button pf-primary" :disabled="busy || loading">
+              <button type="submit" class="pf-button pf-primary" :disabled="busy || loading">
                 {{
                   busy
                     ? 'Enregistrement…'

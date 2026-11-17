@@ -105,7 +105,7 @@ async function submit() {
           </button>
         </span>
       </label>
-      <button class="pf-button pf-primary pf-wide" :disabled="busy || locked">
+      <button type="submit" class="pf-button pf-primary pf-wide" :disabled="busy || locked">
         <template v-if="locked"><PfIcon name="clock" />Réessayer dans {{ countdown }}</template>
         <template v-else>{{ busy ? 'Connexion…' : 'Continuer' }}</template>
       </button>
