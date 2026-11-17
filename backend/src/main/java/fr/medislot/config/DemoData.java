@@ -72,6 +72,15 @@ public class DemoData implements CommandLineRunner {
                         user.id,
                         slug);
         }
+        // Super-administrateur de démonstration : aucun cabinet, console master uniquement.
+        if (!users.existsByEmail("master@medislot.test")) {
+            AppUser master = new AppUser();
+            master.email = "master@medislot.test";
+            master.name = "Équipe plateforme";
+            master.role = fr.medislot.platform.PlatformAuthController.ROLE;
+            master.password = encoder.encode("MediSlot-demo-2026!");
+            users.save(master);
+        }
         for (Long clinic : jdbc.queryForList("select id from clinic order by id", Long.class)) {
             fr.medislot.tenant.TenantContext.set(clinic);
             try {

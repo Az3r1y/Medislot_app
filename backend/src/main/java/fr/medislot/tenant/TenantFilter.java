@@ -36,7 +36,15 @@ public class TenantFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         return !request.getServletPath().startsWith("/api/")
+                || request.getServletPath().startsWith("/api/platform/")
                 || GLOBAL.contains(request.getServletPath());
+    }
+
+    static boolean platform(Authentication auth) {
+        return auth != null
+                && auth.isAuthenticated()
+                && auth.getAuthorities().stream()
+                        .anyMatch(a -> "ROLE_PLATFORM_ADMIN".equals(a.getAuthority()));
     }
 
     public boolean allowed(Authentication auth, long clinic) {
@@ -51,6 +59,12 @@ public class TenantFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         TenantContext.clear();
         try {
+            // Les deux mondes ne se mélangent pas : un compte plateforme n'appelle pas l'API des
+            // cabinets.
+            if (platform(SecurityContextHolder.getContext().getAuthentication())) {
+                problem(response, 403, "Cette zone est réservée aux cabinets.");
+                return;
+            }
             String header = request.getHeader(HEADER), parameter = request.getParameter(PARAM);
             String slug = header != null ? header : parameter;
             if (slug == null

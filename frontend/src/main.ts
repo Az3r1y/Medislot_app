@@ -15,4 +15,8 @@ import '@fontsource/manrope/800.css';
 import './style.css';
 // Avant le montage : la première requête doit déjà porter traceparent.
 demarrerTraces();
-createApp(App).use(createPinia()).mount('#app');
+// Console master (/platform) : application distincte, chargée à part.
+const path = globalThis.location?.pathname ?? '/';
+if (path === '/platform' || path.startsWith('/platform/'))
+  void import('./platform/PlatformApp.vue').then((m) => createApp(m.default).mount('#app'));
+else createApp(App).use(createPinia()).mount('#app');
