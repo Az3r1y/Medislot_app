@@ -28,7 +28,9 @@ async function load() {
 }
 onMounted(load);
 
-const cities = computed(() => [...new Set(all.map((c) => c.city))].sort());
+const cities = computed(() =>
+  [...new Set(all.map((c) => c.city))].sort((a, b) => a.localeCompare(b, 'fr')),
+);
 const shown = computed(() => {
   const term = q.value.trim().toLowerCase();
   return (clinics.value ?? []).filter(
