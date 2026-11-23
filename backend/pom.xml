@@ -26,7 +26,7 @@
 <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-thymeleaf</artifactId></dependency>
 <dependency><groupId>io.github.openhtmltopdf</groupId><artifactId>openhtmltopdf-pdfbox</artifactId><version>1.1.114</version></dependency>
 <!-- @WithSpan, @SpanAttribute (actives avec l'agent) -->
-<dependency><groupId>io.opentelemetry.instrumentation</groupId><artifactId>opentelemetry-instrumentation-annotations</artifactId><version>2.33.1</version></dependency>
+<dependency><groupId>io.opentelemetry.instrumentation</groupId><artifactId>opentelemetry-instrumentation-annotations</artifactId><version>2.34.0</version></dependency>
 </dependencies>
  <build><finalName>medislot</finalName><plugins><plugin><groupId>org.springframework.boot</groupId><artifactId>spring-boot-maven-plugin</artifactId></plugin>
  <!-- ./mvnw fmt:format -->
